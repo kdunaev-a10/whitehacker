@@ -19,6 +19,10 @@ for i in range(1,N):
     num_list[j] = tmp
     print("f", num_list)
 
+
+import requests
+import bs4
+
 print("TEST")
 print("TEST")
 
