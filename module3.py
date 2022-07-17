@@ -26,3 +26,13 @@ import bs4
 print("TEST")
 print("TEST")
 
+a = 100
+b = 50
+print(a,b)
+
+a = a + b #150
+b = a - b # 100
+a = a - b # 50
+
+print(a,b)
+
