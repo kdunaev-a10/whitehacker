@@ -18,3 +18,7 @@ for i in range(1,N):
         print("k", num_list)
     num_list[j] = tmp
     print("f", num_list)
+
+print("TEST")
+print("TEST")
+
