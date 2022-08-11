@@ -4,3 +4,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnec
 xfreerdp (rdesktop)
 xfreerdp /u:Administrator /v:10.11.13.231 /drive:tmp,/home/owl/tmp
 
+MIMIKATZ
+AsrepRoasting, Kerberoasting. Если есть креды. BloodHound
+
+
