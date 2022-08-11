@@ -1,0 +1,4 @@
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+xfreerdp (rdesktop)
+xfreerdp /u:Administrator /v:10.11.13.231 /drive:tmp,/home/owl/tmp
+
