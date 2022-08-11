@@ -7,4 +7,6 @@ xfreerdp /u:Administrator /v:10.11.13.231 /drive:tmp,/home/owl/tmp
 MIMIKATZ
 AsrepRoasting, Kerberoasting. Если есть креды. BloodHound
 
+secretsdump
+пасс-зе-хешь в тачку домена
 
