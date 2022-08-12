@@ -399,5 +399,99 @@ num = 432
 sum_digits = 2
 print(equal(num, sum_digits))
 
+print()
+#Задание 6.4.13
+#Реализуйте функцию-генератор, каждое значение которого — приближение числа e с некоторым числом n.
+print('#Задание 6.4.13')
+
+iter_obj = iter("Hello!")
+print(next(iter_obj))
+print(next(iter_obj))
+print(next(iter_obj))
+print(next(iter_obj))
+print(next(iter_obj))
+print(next(iter_obj))
+#print(next(iter_obj)) # StopIteration
 
 
+print('---------')
+def loop_gen1(arr):
+    count = 0
+    #yield a
+    while True:
+        yield arr[count]
+        count = count+1 if count+1 < len(arr) else 0
+
+def loop_gen(arr):
+    arr_copy = arr.copy()
+    while True:
+        value = arr_copy.pop(0)
+        yield value
+        arr_copy.append(value)
+
+num = loop_gen([1,2,3,4])
+for i in range(7):
+    f = next(num)
+    print(f)
+
+
+
+def approx_e():
+    n = 1
+    while True:
+        yield (1 + 1/n)**n
+        n += 1
+
+last = 0
+for a in approx_e(): # approx_e - генератор
+    if (a - last) < 0.00000001: # ограничение на точность
+        print(a)
+        break # после достижения которого завершаем цикл
+    else:
+        last = a # иначе - присваиваем новое значение
+
+
+print()
+# Задание 6.4.15
+# Реализуйте функцию-декоратор, которая проверяет доступ к функции по username пользователя
+# Функция должна использовать два декоратора: один для проверки авторизации вообще (реализован выше),
+# второй — для проверки доступа.
+print('#Задание 6.4.15')
+
+USERS = ['admin', 'guest', 'director', 'root', 'superstar']
+
+#yesno = input("""Введите Y, если хотите авторизоваться или N,
+#             если хотите продолжить работу как анонимный пользователь: """)
+
+yesno = "Y"
+auth = yesno == "Y"
+
+def is_auth(func):
+    def wrapper(*arg, **kvarg):
+        if auth:
+            print('user is authorized')
+            func(*arg, **kvarg)
+        else:
+            print('user is NOT authorized')
+    return wrapper
+
+
+def has_access(func):
+    def wrapper(*arg, **kvarg):
+        if username in USERS:
+            print('user is authenticated')
+            func(*arg, **kvarg)
+        else:
+            print('user is NOT authenticted')
+    return wrapper
+
+if auth:
+    username = 'admin1'
+
+
+@is_auth
+@has_access
+def from_db():
+    print("some data from database")
+
+from_db()

@@ -247,7 +247,6 @@ for i in range(6):
 print('---------')
 def int_num(start=0, step=1):
     a = start
-    #yield a
     while True:
         yield a
         a += step
