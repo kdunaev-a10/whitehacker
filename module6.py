@@ -444,7 +444,7 @@ def approx_e():
 
 last = 0
 for a in approx_e(): # approx_e - генератор
-    if (a - last) < 0.00000001: # ограничение на точность
+    if (a - last) < 0.000000001: # ограничение на точность
         print(a)
         break # после достижения которого завершаем цикл
     else:
@@ -495,3 +495,77 @@ def from_db():
     print("some data from database")
 
 from_db()
+
+
+
+print()
+# Задание 6.5.1
+# C помощью метода строки str.lower перевести все элементы списка в нижний регистр.
+print('#Задание 6.5.1')
+L = ['THIS', 'IS', 'LOWER', 'STRING']
+
+print(list(map(str.lower, L)))
+
+print(str.lower('SSSS'))
+
+print()
+# Задание 6.5.2
+# Отфильтровать из заданного списка только чётные элементы.
+print('#Задание 6.5.2')
+L = [-2, -1, 0, 1, -3, 2, -3]
+
+def even_odd(x):
+    return True if x%2 == 0 else False
+
+#result = filter(even_odd,L)
+result = filter(lambda x: x%2 == 0,L)
+
+print(list(result))
+
+# map + filter
+some_list = [i - 10 for i in range(20)]
+def pow2(x): return x**2
+def positive(x): return x > 0
+
+print(some_list)
+print(list(map(pow2, filter(positive, some_list))))
+
+
+print()
+# Задание 6.5.3
+# Задача — отсортировать их по индексу массы тела. Он вычисляется по формуле: свой рост в метрах возвести в квадрат,
+# потом массу тела в килограммах разделить на полученную цифру.
+print('#Задание 6.5.3')
+# (вес, рост)
+data = [
+    (82, 191),
+    (68, 174),
+    (90, 189),
+    (73, 179),
+    (76, 184)
+]
+
+print(sorted(data, key=lambda x: (x[0]/(x[1]/100)**2) ))
+
+print()
+# Задание 6.5.4
+# Из списка в предыдущем задании найти кортеж с минимальным индексом массы тела.
+print('#Задание 6.5.4')
+print(min(data, key=lambda x: (x[0]/(x[1]/100)**2) ))
+
+print()
+# Задание 6.5.5
+# Вывести длину каждого элемента в списке
+print('#Задание 6.5.5')
+
+a = ["asd", "bbd", "ddfa", "mcsa"]
+
+print(list(map(len, a)))
+
+print()
+# Задание 6.5.6
+# Переведите все строки из списка в верхний регистр (заглавные буквы).
+print('#Задание 6.5.6')
+a = ["это", "маленький", "текст", "обидно"]
+
+print(list(map(str.upper, a)))
