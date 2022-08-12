@@ -43,8 +43,8 @@ def check_active_connections() -> list:
     # возвращаем список словарей
     return listening
 
-for p in check_active_connections():
-    print(p)
+#for p in check_active_connections():
+#    print(p)
 
 
 
@@ -68,8 +68,9 @@ def get_running_proccesses() -> list:
             }
         )
 
+    processes_list = sorted(processes_list, key=lambda x: x['memory used'], reverse=True)
     for p in processes_list:
         print(p)
 
 
-#get_running_proccesses()
+get_running_proccesses()
