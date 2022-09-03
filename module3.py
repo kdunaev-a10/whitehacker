@@ -167,3 +167,6 @@ abit3 = {"ФИО" : 'Афанасьев Д.Н.', "Количество балл�
 
 abit_list = [abit1, abit2, abit3]
 print(abit_list)
+
+text = "25 Bloomburg St"
+print(text.find('St') )
