@@ -424,3 +424,7 @@ print(f(11))
 print(f(10))
 print(f(11))
 
+
+list_dir = ['melb_data.csv', 'melb_data_fe.zip','citibike-tripdata.csv', 'dates.csv', 'melb_data_fe_module12.csv', 'melb_data_ps.csv', 'melb_data_ps.zip', 'movies.csv', 'movies_data.zip', 'ratings1.csv', 'ratings2.csv', 'ufo.csv']
+list_dir.sort()
+print(list_dir)
