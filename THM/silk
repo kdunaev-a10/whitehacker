@@ -1,0 +1,485 @@
+Getting Started With the SiLK Suite
+
+The SiLK suite has two parts: the packing system and the analysis suite. The packing system supports the collection of multiple network flow types (IPFIX, NetFlow v9, and NetFlow v5) and stores them in binary files. The analysis suite contains the tools needed to carry out various operations (list, sort, count, and statistics) on network flow records. The analysis tools also support Linux CLI pipes, allowing you to create sophisticated queries. 
+
+The VM contains a binary flow file (suspicious-flows.silk) in the /home/ubuntu/Desktop directory. You can verify this by clicking the Terminal icon on the desktop and executing the following commands:
+
+    Changing directory: cd Desktop
+    Listing directory items: ll
+
+Given artefacts
+
+           
+user@tryhackme:~$ cd Desktop
+user@tryhackme:~/Desktop$ ll
+drwxr-xr-x  4 ubuntu ubuntu   4096 Nov 20 06:28 ./
+-rw-r--r--  1 ubuntu ubuntu 227776 Nov 17 21:41 suspicious-flows.silk
+
+        
+
+The next step is discovering the details of the pre-installed SiLK instance in the VM. Use the commands provided to verify the SiLK suite's installation. Use the following command to verify and view the installation details:
+
+    silk_config -v
+
+SiLK Suite
+
+           
+user@tryhackme:~/Desktop$  silk_config -v
+
+silk_config: part of SiLK [REDACTED].........; configuration settings:
+    * Root of packed data tree:         /var/silk/data
+    * Packing logic:                    Run-time plug-in
+    * Timezone support:                 UTC
+    * Available compression methods:    lzo1x [default], none, zlib
+    * IPv6 network connections:         yes
+    * IPv6 flow record support:         yes
+    * IPset record compatibility:       3.14.0
+    * IPFIX/NetFlow9/sFlow collection:  ipfix,netflow9,sflow
+[REDACTED]..
+
+        
+
+SiLK mainly works on a data repository, but it can also process data sources not in the base data repository. By default, the data repository resides under the /var/silk/data directory, which can be changed by updating the SiLK's main configuration file. Note that this task's primary focus is using the SiLK suite for analysis. Therefore, we will only use the network flows given by the SSOC team.
+
+Quick win that will help you answer the questions: You now know which SiLK version you are using.
+
+Flow File Properties with SilK Suite: rwfileinfo
+
+One of the top five actions in packet and flow analysis is overviewing the file info. SiLK suite has a tool rwfileinfo that makes this possible. Now, let's start working with the artefacts provided. We'll need to view the details of binary flow files using the command below:
+
+    rwfileinfo FILENAME
+
+File info
+
+           
+user@tryhackme:~/Desktop$ rwfileinfo suspicious-flows.silk
+suspicious-flows.silk:
+  format(id)          FT_RWIPV6ROUTING(0x0c)
+  version             16
+  byte-order          littleEndian
+  compression(id)     lzo1x(2)
+  header-length       88
+  record-length       88
+  record-version      1
+  silk-version        [REDACTED]...
+  count-records       [REDACTED]...
+  file-size           152366
+
+        
+
+This tool helps you discover the file's high-level details. Now you should see the SiLK version, header length, the total number of flow records, and file size.
+
+Quick win that will help you answer the questions: You now know how to view the sample size in terms of count records. 
+
+Reading Flow Files: rwcut
+
+Rwcut reads binary flow records and prints those selected by the user in text format. It works like a reading and filtering tool. For instance, you can open and print all the records without any filter or parameter, as shown in the command and terminal below:
+
+     rwcut FILENAME
+
+Note that this command will print all records in your console and stop at the last record line. Investigating all these records at once can be overwhelming, especially when working with large flows. Therefore, you need to manage the rwcut tool's output size using the following command:
+
+    rwcut FILENAME --num-recs=5
+    This command limits the output to show only the first five record lines and helps the analysis process.
+    NOTE: You can also view the bottom of the list with --tail-rec=5
+
+rwcut
+
+           
+user@tryhackme:~/Desktop$ rwcut suspicious-flows.silk --num-recs=5
+
+            sIP|           dIP|sPort|dPort|pro|pks|byts|flgs|               sTime| dur  |.                  eTime|
+175.215.235.223|175.215.236.223| 80| 3222| 6| 1| 44| S A |2023/12/05T09:33:07.719| 0.000| 2023/12/05T09:33:07.719|
+175.215.235.223|175.215.236.223| 80| 3220| 6| 1| 44| S A |2023/12/05T09:33:07.725| 0.000| 2023/12/05T09:33:07.725|
+175.215.235.223|175.215.236.223| 80| 3219| 6| 1| 44| S A |2023/12/05T09:33:07.738| 0.000| 2023/12/05T09:33:07.738|
+175.215.235.223|175.215.236.223| 80| 3218| 6| 1| 44| S A |2023/12/05T09:33:07.741| 0.000| 2023/12/05T09:33:07.741|
+175.215.235.223|175.215.236.223| 80| 3221| 6| 1| 44| S A |2023/12/05T09:33:07.743| 0.000| 2023/12/05T09:33:07.743|
+
+        
+
+Up to this point, we read flows with rwcut. Now, let's discover the filtering options offered by this tool. Re-check the output; it's designed by column categories, meaning there's a chance to filter some. Rwcut has great filtering parameters that will help you do this. At this point, the --fields parameter will help you extract particular columns from the output and make it easier to read.
+
+    rwcut FILENAME --fields=protocol,sIP,sPort,dIP,dPort --num-recs=5
+    This command shows the first five records' protocol type, source and destination IPs, and source and destination ports.
+
+rwcut filters
+
+           
+user@tryhackme:~/Desktop$ rwcut suspicious-flows.silk --fields=protocol,sIP,sPort,dIP,dPort --num-recs=5
+
+pro|              sIP|sPort|             dIP|dPort|
+  6|  175.215.235.223|   80| 175.215.236.223| 3222|
+  6|  175.215.235.223|   80| 175.215.236.223| 3220|
+  6|  175.215.235.223|   80| 175.215.236.223| 3219|
+  6|  175.215.235.223|   80| 175.215.236.223| 3218|
+  6|  175.215.235.223|   80| 175.215.236.223| 3221|
+
+        
+
+This view is easier to follow. Note that you can filter other columns using their tags in the filtering parameter. The alternative filtering field options are listed below:
+
+    Source IP: sIP
+    Destination IP: dIP
+    Source port: sPort
+    Destination port: dPort
+    Duration: duration
+    Start time: sTime
+    End time: eTime
+
+One more detail to pay attention to before proceeding: look again at the rwcut terminal above and check the protocol (pro) column. You should have noticed the numeric values under the protocol section. This column shows the used protocol in decimal format. You'll need to pay attention to this section as SiLK highlights protocols in binary form (i.e. 6 or 17), not in keywords (i.e. TCP or UDP). 
+
+Below, Elf Forensic McBlue explains the importance of this detail and how it will help your cyber career.
+
+AoC_Day_17_SiLK Hints from Elf Forensic McBlue
+
+Hints from Elf Forensics McBlue
+
+
+In the forensics aspect of network traffic, every detail is represented by numerical values. To master network traffic and packet analysis, you must have a solid knowledge of protocol numbers, including decimal and hex representations. Note that IANA assigns internet protocol numbers. Examples: ICMP = 1, IPv4 = 4, TCP = 6, and UDP = 17.
+
+Quick win that will help you answer the questions: You now know the date of the sixth record in the given sample.
+
+Filtering the Event of Interest: rwfilter
+
+We've covered how to read and filter particular columns with rwcut, but we'll need to implement conditional filters to extract specific records from the flow. rwfilter will help us implement conditional and logical filters to extract records for the event of interest. 
+
+rwfilter is an essential part of the SiLK suite. It comes with multiple filters for each column in the sample you're working on and is vital for conducting impactful flow analysis. However, even though rwfilter is essential and powerful, it has a tricky detail: it requires its output to be post-processed. This means that it doesn't display the result on the terminal, and as such, it's most commonly used with rwcut to view the output. View the examples below:
+
+    rwfilter FILENAME
+    This command reads the flows with rwfilter and retrieves an output error as the output option is not specified.
+
+rwfilter output error
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk 
+rwfilter: No output(s) specified
+Use 'rwfilter --help' for usage
+
+        
+
+The command is missing filtering and passing output options, which is why it didn't provide any result in return. Let's explore the essential filtering options and then pass the results to rwcut to view the output.
+
+Remember Elf Forensic McBlue's hints on protocols and decimal representations. Let's start by filtering all UDP records using the protocol filter and output-processing options.
+
+    rwfilter FILENAME --proto=17 --pass=stdout | rwcut --num-recs=5
+    This command filters all UDP records with rwfilter, passes the output to rwcut and displays the first five records with rwcut.
+    NOTE: The --pass=stdout | section must be set to process the output with pipe and rwcut.
+
+rwfilter and output-processing with rwcut
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --proto=17 --pass=stdout | rwcut --fields=protocol,sIP,sPort,dIP,dPort --num-recs=5
+
+pro|              sIP| sPort|             dIP| dPort|
+ 17|  175.175.173.221| 59580| 175.219.238.243|    53|
+ 17|  175.219.238.243|    53| 175.175.173.221| 59580|
+ 17|  175.175.173.221| 47888| 175.219.238.243|    53|
+ 17|  175.219.238.243|    53| 175.175.173.221| 47888|
+ 17|  175.175.173.221| 49950| 175.219.238.243|    53|
+
+        
+
+We can now filter records on the event of interest. The alternative filtering field options are listed below.
+
+    Protocols: --proto
+        Possible values are 0-255.
+    Port filters:
+        Any port: --aport
+        Source port: --sport
+        Destination port: --dport
+        Possbile values are 0-65535.
+    IP filters: Any IP address: --any-address
+        Source address: --saddress 
+        Destination address: --daddress
+    Volume filters: Number of the packets --packets number of the bytes --bytes
+
+Now you know how to filter and pass the records to post-processing with Unix pipes. We will use the alternative filter options provided in the upcoming steps. This section is a quick onboarding to make you comfortable with rwfilter.
+
+We still need a big-picture summary to decide where to focus with rwfilter, so consider this step as preparation for the operation! We have the essential tools we need to zoom in on the event of interest. Let's discover some statistics and help the SSOC team check out what's happening on the network!
+
+Quick win that will help you answer the questions: You now know how to filter the records and view the source port number of the sixth UDP record available in the sample provided.
+
+Quick Statistics: rwstats
+
+Up to this point, we have covered fundamental tools that help provide some statistics on traffic records. It's now time to speed things up for a quicker and more automated overview of the events.
+
+Before you start to work with rwstats, you need to remember how to use the --fields parameters we covered in the rwfilter section to fire alternative filtering commands for the event of interest. If you need help using these parameters, return to the rwfilter section and practice using the parameters provided. If you are comfortable with the previous tools, let's move on and discover the power of statistics!
+
+    rwstats FILENAME --fields=dPort --values=records,packets,bytes,sIP-Distinct,dIP-Distinct --count=10
+        --count: Limits the number of records printed on the console
+        --values=records,packets,bytes: Shows the measurement in flows, packets, and bytes
+        --values=sIP-Distinct,dIP-Distinct: Shows the number of unique IP addresses that used the filtered field
+    This command shows the top five destination ports, which will help you understand where the outgoing traffic is going.
+
+rwstats and top 5 destination ports
+
+           
+user@tryhackme:~/Desktop$ rwstats suspicious-flows.silk --fields=dPort --values=records,packets,bytes,sIP-Distinct,dIP-Distinct --count=10
+
+dPort| Records| Packets| Bytes|sIP-Distinct| dIP-Distinct|  %Records| cumul_%|
+   53|    4160|    4333|460579|           1|            1|[REDACTED]|35.33208|
+   80|    1658|    1658| 66320|           1|            1| 14.081875|49.41396|
+40557|       4|       4|   720|           1|            1|  0.033973|49.44793|
+53176|       3|       3|   465|           1|            1|  0.025480|49.47341|
+[REDACTED]...
+
+        
+
+We now have better statistics with less effort. Look at the terminal output above; it shows us the top destination ports and the number of IP addresses involved with each port. This can help us discover anomalies and report our findings together with the SSOC team.
+
+Remember, flow analysis doesn't focus on the deep details as you work on Wireshark. The aim is to have statistical data to help McSkidy foresee the boundaries of the threat scope.
+
+Quick win that will help you answer the questions: You now know how to list statistics and discover the volume on the port numbers.
+
+Assemble the Toolset and Start Hunting Anomalies!
+
+Congratulations, you have all the necessary tools and have completed all the necessary preparation steps. Now, it's time to use what you have learned and save Christmas! Let's start by listing the top talkers on the network!
+
+    rwstats FILENAME --fields=sIP --values=bytes --count=10 --top
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwstats suspicious-flows.silk --fields=sIP --values=bytes --count=10 --top
+
+             sIP|      Bytes|    %Bytes|   cumul_%|
+ 175.219.238.243| [REDACTED]| 52.048036| 52.048036|
+ 175.175.173.221|     460731| 32.615884| 84.663920|
+ 175.215.235.223|     145948| 10.331892| 94.995813|
+ 175.215.236.223|      66320|  4.694899| 99.690712|
+  181.209.166.99|       2744|  0.194252| 99.884964|
+[REDACTED]...
+
+        
+
+Check the %Bytes column; we have revealed the traffic volume distribution and identified the top three talkers on the network. Let's list the top communication pairs to get more meaningful, enriched statistical data.
+
+    rwstats FILENAME --fields=sIP,dIP --values=records,bytes,packets --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwstats suspicious-flows.silk --fields=sIP,dIP --values=records,bytes,packets --count=10
+
+            sIP|             dIP|Records| Bytes|Packets|  %Records|   cumul_%|
+175.175.173.221| 175.219.238.243|   4160|460579|   4333| 35.332088| 35.332088|
+175.219.238.243| 175.175.173.221|   4158|735229|   4331| 35.315101| 70.647189|
+175.215.235.223| 175.215.236.223|   1781|145948|   3317| 15.126550| 85.773739|
+175.215.236.223| 175.215.235.223|   1658| 66320|   1658| 14.081875| 99.855614|
+ 253.254.236.39|  181.209.166.99|      8|  1380|     25|  0.067946| 99.923560|
+ 181.209.166.99|  253.254.236.39|      4|  2744|     24|  0.033973| 99.957534|
+[REDACTED]...
+
+        
+
+Look at the %Bytes and %Records columns. These two columns highlight where the majority of the traffic originates. Now, the top talkers stand out since they are creating the majority of the noise on the network. Remember what we found in the last part of the rwstats: the high traffic volume is on port 53. Let's focus on the DNS records and figure out who is involved.
+
+    rwfilter FILENAME --aport=53 --pass=stdout | rwstats --fields=sIP,dIP --values=records,bytes,packets --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --aport=53 --pass=stdout | rwstats --fields=sIP,dIP --values=records,bytes,packets --count=10 
+
+            sIP|            dIP|Records|  Bytes|Packets|  %Records|     cumul_%|
+175.175.173.221| 175.219.238.243|   4160| 460579|   4333| 50.012022|  50.012022|
+175.219.238.243| 175.175.173.221|   4158| 735229|   4331| 49.987978| 100.000000|
+
+        
+
+We filtered all records that use port 53 (either as a source or destination port). The output shows that approximately 99% of the DNS traffic occurred between these two IP addresses. That's a lot of DNS traffic, and it's abnormal unless one of these hosts is a DNS server.
+
+Even though the traffic volume doesn't represent ordinary traffic, let's view the frequency of the requests using the following command:
+
+    rwfilter FILENAME --saddress=IP-HERE --dport=53 --pass=stdout | rwcut --fields=sIP,dIP,stime | head -10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --saddress=175.175.173.221 --dport=53 --pass=stdout | rwcut --fields=sIP,dIP,stime | head -10
+
+              sIP|            dIP|                    sTime|
+  175.175.173.221| 175.219.238.243|              [REDACTED]|
+  175.175.173.221| 175.219.238.243| 2023/12/08T04:28:45.678|
+  175.175.173.221| 175.219.238.243| 2023/12/08T04:28:45.833|
+  175.175.173.221| 175.219.238.243| 2023/12/08T04:28:46.743|
+  175.175.173.221| 175.219.238.243| 2023/12/08T04:28:46.898|
+  175.175.173.221| 175.219.238.243| 2023/12/08T04:28:47.753|
+  175.175.173.221| 175.219.238.243| 2023/12/08T04:28:47.903|
+  175.175.173.221| 175.219.238.243| 2023/12/08T04:28:48.764|
+  175.175.173.221| 175.219.238.243| 2023/12/08T04:28:48.967|
+
+        
+
+Red flag! Over 10 DNS requests in less than a second are anomalous. We should highlight this communication pair in our report. Note that we filtered the second talker (ends with 221) as it's the source address of the first communication pair. Let's look at the other IP address with the same command.
+
+    rwfilter FILENAME --saddress=IP-HERE --dport=53 --pass=stdout | rwcut --fields=sIP,dIP,stime | head -10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --saddress=175.219.238.243 --dport=53 --pass=stdout | rwcut --fields=sIP,dIP,stime | head -10
+
+              sIP|        dIP|        sTime|
+
+        
+
+The second command provides zero results, meaning the second IP address (ends with 243) didn't send any packet over the DNS port. Note that we will elaborate on these findings in our detection notes.
+
+One final check is left before concluding the DNS analysis and proceeding to the remaining connection pairs. We need to check the host we marked as suspicious to see if other hosts on the network have interacted with it. Use the following command:
+
+    rwfilter FILENAME --any-address=IP-HERE--pass=stdout | rwstats --fields=sIP,dIP --values=records,bytes,packets --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --any-address=175.175.173.221 --pass=stdout | rwstats --fields=sIP,dIP --count=10
+
+             sIP|             dIP|Records|  %Records|    cumul_%|
+ 175.175.173.221| 175.219.238.243|   4160| 49.987984|  49.987984|
+ 175.219.238.243| 175.175.173.221|   4158| 49.963951|  99.951935|
+  205.213.108.99| 175.175.173.221|      2|  0.024033|  99.975967|
+ 175.175.173.221|  205.213.108.99|      2|  0.024033| 100.000000|
+
+        
+
+Look at the command results. There's one more IP address interaction (ends with 99). Let's focus on this new pair by overviewing the communicated ports to identify the services.
+
+    rwfilter FILENAME --any-address=IP-HERE --pass=stdout | rwstats --fields=sIP,sPort,dIP,dPort --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --any-address=205.213.108.99 --pass=stdout | rwstats --fields=sIP,sPort,dIP,dPort,proto --count=10
+
+            sIP| sPort|             dIP| dPort|pro|Records|  %Records| cumul_%|
+ 205.213.108.99|   123| 175.175.173.221| 47640| 17|      1| 25.000000|  25.000|
+ 205.213.108.99|   123| 175.175.173.221| 43210| 17|      1| 25.000000|  50.000|
+175.175.173.221| 47640|  205.213.108.99|   123| 17|      1| 25.000000|  75.000|
+175.175.173.221| 43210|  205.213.108.99|   123| 17|      1| 25.000000| 100.000|
+
+        
+
+There are four records on UDP port 123. We can mark this as normal since there's no high-volume data on it. Remember, UDP port 123 is commonly used by the NTP service. From the volume, it looks just as it should.
+
+Up to this point, we have revealed the potential C2 over DNS. We can now elaborate on these findings in our detection notes.
+
+Detection Notes: The C2 Tat!AoC_Day_17_SiLK Detective notes
+
+
+The communication pair that uses the DNS port is suspicious, and there's a sign that there's a C2 channel using a DNS connection. Elaboration points are listed below:
+
+
+    The source IP address (ends with 221) sent massive DNS requests in short intervals. This pair must be analysed at the packet level.
+    According to the flows, the destination address has a higher chance of being the DNS server. This means the source address might be an infected host communicating with a C2!
+    Dnscat2 is a tool that creates C2 tunnels over DNS packets, so it will be helpful to consider generic patterns created with dnscat2 or a similar tool in further analysis and detection phases.
+    Did we find Tracy McGreedy's C2 channel?
+
+Now, let's continue the analysis to discover if there are any more anomalies. Remember the quick statistics (rwstats), where we discovered the massive volume on the DNS port? That section also highlighted the volume on port 80. Let's quickly check who is involved in that port 80 traffic!
+
+    rwfilter FILENAME --aport=80 --pass=stdout | rwstats --fields=sIP,dIP --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --aport=80 --pass=stdout | rwstats --fields=sIP,dIP --count=10
+
+            sIP|             dIP|Records|  %Records|  cumul_%|
+175.215.235.223| 175.215.236.223|   1781| 51.788311|  51.7883|
+175.215.236.223| 175.215.235.223|   1658| 48.211689| 100.0000|
+
+        
+
+We listed the connection pairs that created the noise. Let's reveal the one that created the load by focusing on the destination port. 
+
+     rwfilter FILENAME --aport=80 --pass=stdout | rwstats --fields=sIP,dIP,dPort --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --aport=80 --pass=stdout | rwstats --fields=sIP,dIP,dPort --count=10
+
+            sIP|             dIP|dPort|Records|  %Records|   cumul_%|
+175.215.236.223| 175.215.235.223|   80|   1658| 48.211689| 48.211689|
+175.215.235.223| 175.215.236.223| 3290|      1|  0.029078| 48.240768|
+175.215.235.223| 175.215.236.223| 4157|      1|  0.029078| 48.269846|
+[REDACTED]...
+
+        
+
+We have now listed all the addresses that used port 80 and revealed that the address ending with 236.223 was the one that created the noise by sending requests. Remember, we don't have the payloads to see the request details, but the flow details can give some insights about the pattern. Let's view the frequency and flags of the requests to see if there's any abnormal pattern there!
+
+    rwfilter FILENAME --saddress=175.215.236.223 --pass=stdout | rwcut --fields=sIP,dIP,dPort,flag,stime | head 
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --saddress=175.215.236.223 --pass=stdout | rwcut --fields=sIP,dIP,dPort,flag,stime | head
+
+            sIP|             dIP|dPort|flags|                   sTime|
+175.215.236.223| 175.215.235.223|   80| S   | 2023/12/05T09:33:07.723|
+175.215.236.223| 175.215.235.223|   80| S   | 2023/12/05T09:33:07.732|
+175.215.236.223| 175.215.235.223|   80| S   | 2023/12/05T09:33:07.748|
+175.215.236.223| 175.215.235.223|   80| S   | 2023/12/05T09:33:07.740|
+[REDACTED]...
+
+        
+
+A series of SYN packets sent in less than a second needs attention and clarification. Let's view all the packets sent by that host first.
+
+    rwfilter FILENAME --saddress=175.215.236.223 --pass=stdout | rwstats --fields=sIP,flag,dIP --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --saddress=175.215.236.223 --pass=stdout | rwstats --fields=sIP,flag,dIP --count=10
+
+            sIP|flags|             dIP|    Records|   %Records|    cumul_%|
+175.215.236.223| S   | 175.215.235.223| [REDACTED]| 100.000000| 100.000000|
+
+        
+
+Look at the results: no ACK packet has been sent by that host! This pattern is starting to look suspicious now. Let's take a look at the destination's answers.
+
+    rwfilter FILENAME --saddress=175.215.235.223 --pass=stdout | rwstats --fields=sIP,flag,dIP --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --saddress=175.215.235.223 --pass=stdout | rwstats --fields=sIP,flag,dIP --count=10
+
+            sIP|flags|             dIP|Records|   %Records|    cumul_%|
+175.215.235.223| S  A| 175.215.236.223|   1781| 100.000000| 100.000000|
+
+        
+
+The destination address sends SYN-ACK packets to complete the three-way handshake process. That's expected. However, we have already revealed that the source address only sent SYN packets. It's supposed to send ACK packets after receiving SYN-ACK responses to complete the three-way handshake process. That's a red flag and looks like a DoS attack!
+
+We'll elaborate on this in our detection notes, but we still need to check if this host has interacted with other hosts on the network using the following command.
+
+    rwfilter FILENAME --any-address=175.215.236.223 --pass=stdout | rwstats --fields=sIP,dIP --count=10
+
+Hunting with SiLK
+
+           
+user@tryhackme:~/Desktop$ rwfilter suspicious-flows.silk --any-address=175.215.236.223 --pass=stdout | rwstats --fields=sIP,dIP --count=10
+
+            sIP|             dIP|Records|  %Records|    cumul_%|
+175.215.235.223| 175.215.236.223|   1781| 51.788311|  51.788311|  
+175.215.236.223| 175.215.235.223|   1658| 48.211689| 100.000000|
+
+        
+
+Luckily, there are no further interactions, so we can conclude the analysis and elaborate on the findings in our notes.
+
+Detection Notes: Not a Water Flood!AoC_Day_17_SiLK Detective notes
+
+
+The communication pair that uses port 80 is suspicious, and there's a sign of a DoS attack. Elaboration points are listed below:
+
+
+    The source IP address (ends with 236.223) sent many TCP-SYN packets in short intervals.
+    The suspicious address didn't send an ACK request, representing the TCP three-way handshake process.
+    There's a high probability of a SYN-Flood attack.
+    Who is trying to DoS that particular host, and why?
+    Is that host compromised, or do we have an insider?
